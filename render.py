@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timezone
 
 import pandas as pd
+from jinja2 import Environment, FileSystemLoader
 
 
 def load_data(data_dir: str = "data") -> dict:
@@ -258,7 +259,11 @@ def render(
     template_path: str = "templates/report.html.j2",
     output_path: str = "report.html",
 ) -> None:
-    raise NotImplementedError
+    env = Environment(loader=FileSystemLoader("."), autoescape=False)
+    template = env.get_template(template_path)
+    html = template.render(**metrics)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
 
 
 if __name__ == "__main__":
