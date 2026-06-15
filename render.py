@@ -1,9 +1,7 @@
-import json
 import os
-from datetime import date
+from datetime import datetime, timezone
 
 import pandas as pd
-from jinja2 import Environment, FileSystemLoader
 
 
 def load_data(data_dir: str = "data") -> dict:
@@ -53,9 +51,9 @@ def _chart_adoption_trend(df: pd.DataFrame) -> dict:
 
 
 def _chart_population_donut(df: pd.DataFrame) -> dict:
-    sku = int(df[(df["IS_INTEROPERABILITY"] == True) & (df["HAS_SKU_INTEROPERABILITY"] == True)]["COMPANY_COUNT"].sum())
-    no_sku = int(df[(df["IS_INTEROPERABILITY"] == True) & (df["HAS_SKU_INTEROPERABILITY"] == False)]["COMPANY_COUNT"].sum())
-    non_interop = int(df[df["IS_INTEROPERABILITY"] == False]["COMPANY_COUNT"].sum())
+    sku = int(df[df["IS_INTEROPERABILITY"] & df["HAS_SKU_INTEROPERABILITY"]]["COMPANY_COUNT"].sum())
+    no_sku = int(df[df["IS_INTEROPERABILITY"] & ~df["HAS_SKU_INTEROPERABILITY"]]["COMPANY_COUNT"].sum())
+    non_interop = int(df[~df["IS_INTEROPERABILITY"]]["COMPANY_COUNT"].sum())
     return {
         "data": [{
             "values": [sku, no_sku, non_interop],
@@ -128,7 +126,7 @@ def _chart_product_family_bar(df: pd.DataFrame) -> dict:
              "name": "Interop Active", "marker": {"color": "#60a5fa"}},
         ],
         "layout": {
-            "barmode": "overlay",
+            "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a",
             "font": {"color": "#94a3b8"},
             "xaxis": {"title": "Customers", "gridcolor": "#334155"},
@@ -152,7 +150,7 @@ def _chart_arch_type_bar(df: pd.DataFrame) -> dict:
              "name": "Interop", "marker": {"color": "#60a5fa"}},
         ],
         "layout": {
-            "barmode": "overlay",
+            "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a",
             "font": {"color": "#94a3b8"},
             "xaxis": {"title": "Companies", "gridcolor": "#334155"},
@@ -163,9 +161,7 @@ def _chart_arch_type_bar(df: pd.DataFrame) -> dict:
     }
 
 
-def compute_metrics(data: dict) -> dict:
-    from datetime import datetime, timezone
-
+def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
     q1 = data["q1"].sort_values("MONTH_START", ascending=False).reset_index(drop=True)
     q4 = data["q4"].sort_values("MONTH", ascending=False).reset_index(drop=True)
     q5 = data["q5"].sort_values("REPORT_MONTH", ascending=False).reset_index(drop=True)
@@ -180,7 +176,7 @@ def compute_metrics(data: dict) -> dict:
     active_customers = int(cur["INTEROP_CUSTOMERS"])
     customers_delta = int(cur["INTEROP_CUSTOMERS"] - prev["INTEROP_CUSTOMERS"]) if prev is not None else 0
 
-    today = pd.Timestamp.today().normalize()
+    today = (_today or pd.Timestamp.today()).normalize()
     current_month_start = today.replace(day=1)
     q4_full = q4[q4["MONTH"] < current_month_start].reset_index(drop=True)
     q4_last = q4_full.iloc[0] if len(q4_full) > 0 else q4.iloc[0]
@@ -203,9 +199,7 @@ def compute_metrics(data: dict) -> dict:
     else:
         ao_delta_pct = 0.0
 
-    sku_gap = int(
-        q6[(q6["IS_INTEROPERABILITY"] == True) & (q6["HAS_SKU_INTEROPERABILITY"] == False)]["COMPANY_COUNT"].sum()
-    )
+    sku_gap = int(q6[q6["IS_INTEROPERABILITY"] & ~q6["HAS_SKU_INTEROPERABILITY"]]["COMPANY_COUNT"].sum())
 
     table_rows = [
         {

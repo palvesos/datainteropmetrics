@@ -56,8 +56,8 @@ def test_compute_metrics_mom_delta_customers(sample_data):
 
 
 def test_compute_metrics_prod_executions_uses_last_full_month(sample_data):
-    # June is the current partial month; May (114734) should be the KPI value
-    metrics = compute_metrics(sample_data)
+    # Inject today=2026-06-15 so June is always treated as the current partial month
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     assert metrics["kpis"]["prod_executions"]["value"] == 114734
 
 
