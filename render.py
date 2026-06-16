@@ -1,4 +1,5 @@
 import os
+import pathlib
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -259,7 +260,7 @@ def render(
     template_path: str = "templates/report.html.j2",
     output_path: str = "report.html",
 ) -> None:
-    env = Environment(loader=FileSystemLoader("."), autoescape=False)
+    env = Environment(loader=FileSystemLoader(pathlib.Path(__file__).parent), autoescape=False)
     template = env.get_template(template_path)
     html = template.render(**metrics)
     with open(output_path, "w", encoding="utf-8") as f:
