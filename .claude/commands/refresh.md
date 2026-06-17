@@ -4,55 +4,50 @@ Fetch fresh data from Snowflake and regenerate the HTML report.
 
 ## Steps
 
-Run these steps in order. Stop and report any error.
+Run these steps in order. If any step fails (non-zero exit code or exception), stop and print the error.
 
 ### 1. Run the 6 queries and save as Parquet
 
-For each query below, execute it with `snow sql`, parse the JSON response
-into a pandas DataFrame, convert date columns, and save to `data/`.
+For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean columns, and save to `data/`. Guard the date conversion so empty result sets don't fail.
 
-Use this pattern for each query:
+General pattern (use the per-query values from the table below):
 
-```python
-import json, pandas as pd
-
-result_json = <output from snow sql command>
-rows = json.loads(result_json)
-df = pd.DataFrame(rows)
-# Convert date column
-df['<DATE_COL>'] = pd.to_datetime(df['<DATE_COL>'])
-df.to_parquet('data/<filename>.parquet', index=False)
+```bash
+# Capture
+uvx --python 3.13 --from snowflake-cli snow sql --filename queries/<QN_FILE>.sql --format json --connection os > /tmp/<QN>.json
 ```
 
-**q1 — Monthly adoption trend → data/q1_adoption_trend.parquet**
-- SQL file: `queries/q1_adoption_trend.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q1_adoption_trend.sql)" --format json --connection os`
-- Date column to convert: `MONTH_START`
+```python
+# Parse & save (replace placeholders with per-query values from the table)
+import json, pandas as pd
+with open('/tmp/<QN>.json') as f:
+    rows = json.load(f)
+df = pd.DataFrame(rows)
+# Date column conversion — guarded so empty results don't KeyError
+for col in [<DATE_COLS>]:
+    if not df.empty and col in df.columns:
+        df[col] = pd.to_datetime(df[col])
+# Boolean column normalization (q6 only)
+for col in [<BOOL_COLS>]:
+    if col in df.columns:
+        df[col] = df[col].map({'TRUE': True, 'FALSE': False, True: True, False: False, 1: True, 0: False})
+df.to_parquet('data/<QN_FILE>.parquet', index=False)
+```
 
-**q2 — By product family → data/q2_by_product_family.parquet**
-- SQL file: `queries/q2_by_product_family.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q2_by_product_family.sql)" --format json --connection os`
-- No date columns.
+Per-query values:
 
-**q3 — By architecture type → data/q3_by_arch_type.parquet**
-- SQL file: `queries/q3_by_arch_type.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q3_by_arch_type.sql)" --format json --connection os`
-- No date columns.
+| Key | SQL file | Output Parquet | Date cols | Bool cols |
+|-----|----------|----------------|-----------|-----------|
+| q1 | `queries/q1_adoption_trend.sql` | `data/q1_adoption_trend.parquet` | `'MONTH_START'` | — |
+| q2 | `queries/q2_by_product_family.sql` | `data/q2_by_product_family.parquet` | — | — |
+| q3 | `queries/q3_by_arch_type.sql` | `data/q3_by_arch_type.parquet` | — | — |
+| q4 | `queries/q4_executions.sql` | `data/q4_executions.parquet` | `'MONTH'` | — |
+| q5 | `queries/q5_ao_usage.sql` | `data/q5_ao_usage.parquet` | `'REPORT_MONTH'` | — |
+| q6 | `queries/q6_population.sql` | `data/q6_population.parquet` | — | `'IS_INTEROPERABILITY'`, `'HAS_SKU_INTEROPERABILITY'` |
 
-**q4 — Executions by month → data/q4_executions.parquet**
-- SQL file: `queries/q4_executions.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q4_executions.sql)" --format json --connection os`
-- Date column to convert: `MONTH`
+For queries with no date cols, leave `[<DATE_COLS>]` as `[]`. For queries with no bool cols, leave `[<BOOL_COLS>]` as `[]`.
 
-**q5 — AO usage trend → data/q5_ao_usage.parquet**
-- SQL file: `queries/q5_ao_usage.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q5_ao_usage.sql)" --format json --connection os`
-- Date column to convert: `REPORT_MONTH`
-
-**q6 — All-time population → data/q6_population.parquet**
-- SQL file: `queries/q6_population.sql`
-- Run: `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat queries/q6_population.sql)" --format json --connection os`
-- Boolean columns: `IS_INTEROPERABILITY`, `HAS_SKU_INTEROPERABILITY` (convert with `df[col] = df[col].astype(bool)`)
+After running all 6 queries, confirm 6 Parquet files exist in `data/` before continuing.
 
 ### 2. Render the report
 
@@ -63,7 +58,7 @@ python render.py
 ### 3. Report completion
 
 Print a summary:
-- Row counts for each Parquet file
-- File sizes in KB
-- Timestamp
+- Row counts for each Parquet file (use `pd.read_parquet(path).shape[0]`)
+- File sizes in KB (use `os.path.getsize(path) / 1024`)
+- Timestamp (UTC)
 - Path to report.html
