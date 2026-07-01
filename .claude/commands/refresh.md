@@ -8,7 +8,9 @@ Run these steps in order. If any step fails (non-zero exit code or exception), s
 
 ### 1. Run the 6 queries and save as Parquet
 
-For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean columns, and save to `data/`. Guard the date conversion so empty result sets don't fail.
+For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean/numeric columns, and save to `data/`. Guard the conversions so empty result sets don't fail.
+
+**Important:** snow CLI serializes Snowflake `DECIMAL`/`NUMERIC` columns as JSON **strings** (to preserve precision). Any column that should be a float or int must be explicitly coerced with `pd.to_numeric()` after parsing, otherwise downstream arithmetic in `render.py` will raise `TypeError: unsupported operand type(s) for -: 'str' and 'str'`.
 
 General pattern (use the per-query values from the table below):
 
@@ -31,21 +33,25 @@ for col in [<DATE_COLS>]:
 for col in [<BOOL_COLS>]:
     if col in df.columns:
         df[col] = df[col].map({'TRUE': True, 'FALSE': False, True: True, False: False, 1: True, 0: False})
+# Numeric column coercion — Snowflake DECIMAL/NUMERIC arrives as JSON strings
+for col in [<NUM_COLS>]:
+    if col in df.columns:
+        df[col] = pd.to_numeric(df[col])
 df.to_parquet('data/<QN_FILE>.parquet', index=False)
 ```
 
 Per-query values:
 
-| Key | SQL file | Output Parquet | Date cols | Bool cols |
-|-----|----------|----------------|-----------|-----------|
-| q1 | `queries/q1_adoption_trend.sql` | `data/q1_adoption_trend.parquet` | `'MONTH_START'` | — |
-| q2 | `queries/q2_by_product_family.sql` | `data/q2_by_product_family.parquet` | — | — |
-| q3 | `queries/q3_by_arch_type.sql` | `data/q3_by_arch_type.parquet` | — | — |
-| q4 | `queries/q4_executions.sql` | `data/q4_executions.parquet` | `'MONTH'` | — |
-| q5 | `queries/q5_ao_usage.sql` | `data/q5_ao_usage.parquet` | `'REPORT_MONTH'` | — |
-| q6 | `queries/q6_population.sql` | `data/q6_population.parquet` | — | `'IS_INTEROPERABILITY'`, `'HAS_SKU_INTEROPERABILITY'` |
+| Key | SQL file | Output Parquet | Date cols | Bool cols | Numeric cols |
+|-----|----------|----------------|-----------|-----------|--------------|
+| q1 | `queries/q1_adoption_trend.sql` | `data/q1_adoption_trend.parquet` | `'MONTH_START'` | — | `'INTEROP_CUSTOMERS'`, `'SKU_INTEROP_CUSTOMERS'`, `'TOTAL_CUSTOMERS'`, `'ADOPTION_PCT'` |
+| q2 | `queries/q2_by_product_family.sql` | `data/q2_by_product_family.parquet` | — | — | `'TOTAL_CUSTOMERS'`, `'INTEROP_ACTIVE'`, `'HAS_SKU_INTEROP'` |
+| q3 | `queries/q3_by_arch_type.sql` | `data/q3_by_arch_type.parquet` | — | — | `'COMPANIES'`, `'INTEROP_COMPANIES'`, `'SKU_INTEROP'` |
+| q4 | `queries/q4_executions.sql` | `data/q4_executions.parquet` | `'MONTH'` | — | `'ACTIVE_INFRA'`, `'PROD_EXECUTIONS'`, `'DEV_EXECUTIONS'`, `'NONPROD_EXECUTIONS'`, `'PROD_AO_USAGE'` |
+| q5 | `queries/q5_ao_usage.sql` | `data/q5_ao_usage.parquet` | `'REPORT_MONTH'` | — | `'ACTIVE_INFRA'`, `'PROD_AO_LAST_WEEK'`, `'DEV_AO_LAST_WEEK'`, `'PROD_AO_MAX_WEEK'`, `'DEV_AO_MAX_WEEK'` |
+| q6 | `queries/q6_population.sql` | `data/q6_population.parquet` | — | `'IS_INTEROPERABILITY'`, `'HAS_SKU_INTEROPERABILITY'` | `'COMPANY_COUNT'` |
 
-For queries with no date cols, leave `[<DATE_COLS>]` as `[]`. For queries with no bool cols, leave `[<BOOL_COLS>]` as `[]`.
+For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 
 After running all 6 queries, confirm 6 Parquet files exist in `data/` before continuing.
 
