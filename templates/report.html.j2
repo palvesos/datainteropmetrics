@@ -56,6 +56,8 @@
   <button class="tab-btn" onclick="switchTab('adoption')">Adoption</button>
   <button class="tab-btn" onclick="switchTab('usage')">Usage</button>
   <button class="tab-btn" onclick="switchTab('segments')">Segments</button>
+  <button class="tab-btn" onclick="switchTab('datafabric')">Data Fabric</button>
+  <button class="tab-btn" onclick="switchTab('targeting')">Targeting</button>
 </nav>
 
 <!-- OVERVIEW -->
@@ -167,6 +169,71 @@
       </div>
     </div>
   </div>
+  <div class="section">
+    <h3>Adoption by Deployment Option (ODC agents)</h3>
+    <div id="chart-deployment-option" class="chart-container"></div>
+  </div>
+</div>
+
+<!-- DATA FABRIC -->
+<div id="tab-datafabric" class="tab-content">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">DF Connections (last full mo.)</div>
+      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_connections.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_connections.direction }}">
+        {{ "▲" if kpis.df_connections.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_connections.delta) }}% MoM
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">DF Tenants (last full mo.)</div>
+      <div class="kpi-value kpi-adoption">{{ "{:,}".format(kpis.df_tenants.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_tenants.direction }}">
+        {{ "▲" if kpis.df_tenants.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_tenants.delta) }}% MoM
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Providers</div>
+      <div class="kpi-value kpi-executions">{{ kpis.df_providers.value }}</div>
+    </div>
+  </div>
+  <div class="chart-row">
+    <div class="section"><h3>Connector Usage Trend (12 mo.)</h3><div id="chart-df-trend" class="chart-container tall"></div></div>
+    <div class="section"><h3>By Provider (last full mo.)</h3><div id="chart-df-providers" class="chart-container tall"></div></div>
+  </div>
+</div>
+
+<!-- TARGETING -->
+<div id="tab-targeting" class="tab-content">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">ARR at Risk (interop, no SKU)</div>
+      <div class="kpi-value kpi-ao">€{{ "{:,.0f}".format(kpis.arr_at_risk.value) }}</div>
+      <div class="kpi-delta">{{ sku_gap_count }} customers</div>
+    </div>
+  </div>
+  <div class="section">
+    <h3>SKU Gap — Interop customers without SKU (top 20 by ARR)</h3>
+    <table>
+      <thead><tr><th>Company</th><th>Segment</th><th>Deployment</th><th>ARR (EUR)</th></tr></thead>
+      <tbody>
+        {% for r in tables.sku_gap_targeting %}
+        <tr><td>{{ r.company }}</td><td>{{ r.segment }}</td><td>{{ r.deployment }}</td><td>{{ "{:,.0f}".format(r.arr_eur) }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="section">
+    <h3>Active Production Infra Not Reporting Telemetry (top 20)</h3>
+    <table>
+      <thead><tr><th>Company</th><th>Architecture</th><th>Deployment</th><th>Activation Code</th></tr></thead>
+      <tbody>
+        {% for r in tables.infra_no_telemetry %}
+        <tr><td>{{ r.company }}</td><td>{{ r.arch }}</td><td>{{ r.deployment }}</td><td>{{ r.activation_code }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
@@ -176,7 +243,10 @@
     executions_bar:    {{ charts.executions_bar | tojson }},
     ao_usage_line:     {{ charts.ao_usage_line | tojson }},
     product_family_bar:{{ charts.product_family_bar | tojson }},
-    arch_type_bar:     {{ charts.arch_type_bar | tojson }}
+    arch_type_bar:     {{ charts.arch_type_bar | tojson }},
+    data_fabric_trend:     {{ charts.data_fabric_trend | tojson }},
+    data_fabric_providers: {{ charts.data_fabric_providers | tojson }},
+    deployment_option_bar: {{ charts.deployment_option_bar | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -188,6 +258,9 @@
   Plotly.newPlot('chart-ao-usage-line',       charts.ao_usage_line.data,      charts.ao_usage_line.layout,      cfg);
   Plotly.newPlot('chart-product-family-bar',  charts.product_family_bar.data, charts.product_family_bar.layout, cfg);
   Plotly.newPlot('chart-arch-type-bar',       charts.arch_type_bar.data,      charts.arch_type_bar.layout,      cfg);
+  Plotly.newPlot('chart-df-trend',           charts.data_fabric_trend.data,     charts.data_fabric_trend.layout,     cfg);
+  Plotly.newPlot('chart-df-providers',       charts.data_fabric_providers.data, charts.data_fabric_providers.layout, cfg);
+  Plotly.newPlot('chart-deployment-option',  charts.deployment_option_bar.data, charts.deployment_option_bar.layout, cfg);
 
   function switchTab(name) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
