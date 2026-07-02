@@ -1,6 +1,6 @@
 -- Data context: EXTERNALCONNECTIONCOUNT, INFRASTRUCTURE (SCD2), COMPANY. Last complete month, per provider.
 -- NOTE: event_sent is VARCHAR (ISO-8601); cast to TIMESTAMP before date operations.
--- NOTE: QUALIFY deduplicates tenant rows that match multiple SCD2 infra intervals.
+-- NOTE: QUALIFY partition = source natural key (tenant, environment_id, event_provider, event_sent); dedupes infra SCD2 fan-out only.
 WITH deduped AS (
   SELECT
     ext.event_sent,
@@ -19,7 +19,7 @@ WITH deduped AS (
     AND comp.type IN ('customer', 'partner')
   WHERE ext.event_provider ILIKE 'o11%'
     AND DATE_TRUNC('month', TRY_TO_TIMESTAMP(ext.event_sent)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE))
-  QUALIFY ROW_NUMBER() OVER (PARTITION BY ext.tenant, ext.event_sent ORDER BY infra.date_from DESC) = 1
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY ext.tenant, ext.environment_id, ext.event_provider, ext.event_sent ORDER BY infra.date_from DESC) = 1
 )
 SELECT
   event_provider                                     AS PROVIDER,
