@@ -180,3 +180,18 @@ def test_compute_metrics_new_charts_present(sample_data):
         assert name in metrics["charts"], f"missing {name}"
         assert len(metrics["charts"][name]["data"]) > 0
         assert "layout" in metrics["charts"][name]
+
+
+def test_compute_metrics_arr_at_risk(sample_data):
+    metrics = compute_metrics(sample_data)
+    assert metrics["kpis"]["arr_at_risk"]["value"] == pytest.approx(870000.0)
+    assert metrics["sku_gap_count"] == 3
+
+
+def test_compute_metrics_targeting_tables(sample_data):
+    metrics = compute_metrics(sample_data)
+    sku = metrics["tables"]["sku_gap_targeting"]
+    assert sku[0]["company"] == "Acme Corp"          # highest ARR first
+    assert sku[0]["arr_eur"] == 500000.0
+    assert len(metrics["tables"]["infra_no_telemetry"]) == 2
+    assert len(metrics["tables"]["deployment_option"]) == 3

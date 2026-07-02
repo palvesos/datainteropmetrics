@@ -293,6 +293,27 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
         for _, row in q1.iterrows()
     ]
 
+    # --- Targeting (q10 SKU gap, q11 no-telemetry) + deployment table (q9) ---
+    q10 = data["q10"]
+    arr_at_risk = float(q10["ARR_EUR"].fillna(0).sum())
+    sku_gap_count = int(len(q10))
+    sku_gap_targeting = [
+        {"company": r["COMPANY_NAME"], "segment": r["SEGMENT"],
+         "deployment": r["USAGE_DEPLOYMENT_OPTION"], "arr_eur": float(r["ARR_EUR"] or 0)}
+        for _, r in q10.sort_values("ARR_EUR", ascending=False).head(20).iterrows()
+    ]
+    infra_no_telemetry = [
+        {"company": r["COMPANY_NAME"], "arch": r["ARCHITECTURE_TYPE"],
+         "deployment": r["USAGE_DEPLOYMENT_OPTION"], "activation_code": r["ACTIVATION_CODE"]}
+        for _, r in data["q11"].head(20).iterrows()
+    ]
+    deployment_option = [
+        {"option": r["USAGE_DEPLOYMENT_OPTION"], "customers": int(r["TOTAL_CUSTOMERS"]),
+         "with_agents": int(r["CUSTOMERS_WITH_AGENTS"]), "adoption_pct": float(r["ADOPTION_RATE_PCT"]),
+         "agents": int(r["TOTAL_AGENTS"]), "executions": int(r["TOTAL_EXECUTIONS"])}
+        for _, r in data["q9"].iterrows()
+    ]
+
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "kpis": {
@@ -323,8 +344,10 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "df_tenants": {"value": df_tenants, "delta": round(tenant_delta, 1), "is_pct": True,
                            "direction": "up" if tenant_delta >= 0 else "down"},
             "df_providers": {"value": df_providers},
+            "arr_at_risk": {"value": round(arr_at_risk, 2)},
         },
         "sku_gap": sku_gap,
+        "sku_gap_count": sku_gap_count,
         "charts": {
             "adoption_trend": _chart_adoption_trend(q1),
             "population_donut": _chart_population_donut(q6),
@@ -338,6 +361,9 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
         },
         "tables": {
             "adoption_trend": table_rows,
+            "sku_gap_targeting": sku_gap_targeting,
+            "infra_no_telemetry": infra_no_telemetry,
+            "deployment_option": deployment_option,
         },
     }
 
