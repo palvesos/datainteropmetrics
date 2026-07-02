@@ -618,16 +618,16 @@ Add to `tests/test_render.py`:
 
 ```python
 def test_compute_metrics_df_connections_last_full_month(sample_data):
-    # June is partial current month; May (21000) is the last full month
-    metrics = compute_metrics(sample_data)
+    # Inject today=2026-06-15 so June is the partial current month; May (21000) is last full month
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     assert metrics["kpis"]["df_connections"]["value"] == 21000
 
 def test_compute_metrics_df_tenants_last_full_month(sample_data):
-    metrics = compute_metrics(sample_data)
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     assert metrics["kpis"]["df_tenants"]["value"] == 178
 
 def test_compute_metrics_df_providers_count(sample_data):
-    metrics = compute_metrics(sample_data)
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     assert metrics["kpis"]["df_providers"]["value"] == 4
 ```
 
@@ -638,13 +638,12 @@ Expected: FAIL (KeyError `df_connections`).
 
 - [ ] **Step 3: Implement in `compute_metrics`**
 
-Add before the `return {` in `compute_metrics` (reuse the existing `current_month_start` if present, else compute):
+Add before the `return {` in `compute_metrics`. **Reuse the existing `current_month_start`** variable (already derived from the injected `_today` earlier in the function — do NOT call `pd.Timestamp.today()` again; that reintroduces time-coupling the suite injects `_today` to avoid):
 
 ```python
     # --- Data Fabric (q7 monthly totals, last complete month) ---
     q7 = data["q7"].sort_values("MONTH", ascending=False).reset_index(drop=True)
-    _cms = pd.Timestamp.today().normalize().replace(day=1)
-    q7_full = q7[q7["MONTH"] < _cms].reset_index(drop=True)
+    q7_full = q7[q7["MONTH"] < current_month_start].reset_index(drop=True)
     df_cur = q7_full.iloc[0] if len(q7_full) else q7.iloc[0]
     df_prev = q7_full.iloc[1] if len(q7_full) > 1 else None
 
