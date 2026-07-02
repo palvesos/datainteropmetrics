@@ -157,3 +157,17 @@ def test_render_output_has_four_tabs(sample_data, tmp_path):
     content = open(output).read()
     for tab in ("Overview", "Adoption", "Usage", "Segments"):
         assert tab in content
+
+
+def test_compute_metrics_df_connections_last_full_month(sample_data):
+    # Inject today=2026-06-15 so June is the partial current month; May (21000) is last full month
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    assert metrics["kpis"]["df_connections"]["value"] == 21000
+
+def test_compute_metrics_df_tenants_last_full_month(sample_data):
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    assert metrics["kpis"]["df_tenants"]["value"] == 178
+
+def test_compute_metrics_df_providers_count(sample_data):
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    assert metrics["kpis"]["df_providers"]["value"] == 4

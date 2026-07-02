@@ -208,6 +208,21 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
 
     sku_gap = int(q6[q6["IS_INTEROPERABILITY"] & ~q6["HAS_SKU_INTEROPERABILITY"]]["COMPANY_COUNT"].sum())
 
+    # --- Data Fabric (q7 monthly totals, last complete month) ---
+    q7 = data["q7"].sort_values("MONTH", ascending=False).reset_index(drop=True)
+    q7_full = q7[q7["MONTH"] < current_month_start].reset_index(drop=True)
+    df_cur = q7_full.iloc[0] if len(q7_full) else q7.iloc[0]
+    df_prev = q7_full.iloc[1] if len(q7_full) > 1 else None
+
+    def _pct_delta(cur, prev):
+        return float((cur - prev) / prev * 100) if prev not in (None, 0) else 0.0
+
+    df_connections = int(df_cur["TOTAL_CONNECTIONS"])
+    df_tenants = int(df_cur["UNIQUE_TENANTS"])
+    conn_delta = _pct_delta(df_cur["TOTAL_CONNECTIONS"], df_prev["TOTAL_CONNECTIONS"] if df_prev is not None else None)
+    tenant_delta = _pct_delta(df_cur["UNIQUE_TENANTS"], df_prev["UNIQUE_TENANTS"] if df_prev is not None else None)
+    df_providers = int((data["q8"]["TOTAL_CONNECTIONS"] > 0).sum())
+
     table_rows = [
         {
             "month": row["MONTH_START"].strftime("%Y-%m"),
@@ -244,6 +259,11 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
                 "is_pct": True,
                 "direction": "up" if ao_delta_pct >= 0 else "down",
             },
+            "df_connections": {"value": df_connections, "delta": round(conn_delta, 1), "is_pct": True,
+                               "direction": "up" if conn_delta >= 0 else "down"},
+            "df_tenants": {"value": df_tenants, "delta": round(tenant_delta, 1), "is_pct": True,
+                           "direction": "up" if tenant_delta >= 0 else "down"},
+            "df_providers": {"value": df_providers},
         },
         "sku_gap": sku_gap,
         "charts": {
