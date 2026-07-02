@@ -226,3 +226,21 @@ def test_compute_metrics_nan_arr_coerced_to_zero(sample_data):
     if null_row is not None:
         assert null_row["arr_eur"] == 0.0, f"Expected arr_eur=0.0 for None ARR, got {null_row['arr_eur']}"
         assert isinstance(null_row["arr_eur"], float)
+
+
+def test_render_has_new_tabs(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    for tab in ("Data Fabric", "Targeting"):
+        assert tab in content
+
+
+def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "21,000" in content        # df_connections last full month
+    assert "Acme Corp" in content     # top SKU-gap target
