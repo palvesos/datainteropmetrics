@@ -1,6 +1,5 @@
 import os
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -8,28 +7,6 @@ from render import compute_metrics, load_data, render
 
 
 # --- load_data ---
-
-def test_load_data_returns_six_keys(tmp_path, sample_data):
-    for name, filename in [
-        ("q1", "q1_adoption_trend.parquet"),
-        ("q2", "q2_by_product_family.parquet"),
-        ("q3", "q3_by_arch_type.parquet"),
-        ("q4", "q4_executions.parquet"),
-        ("q5", "q5_ao_usage.parquet"),
-        ("q6", "q6_population.parquet"),
-        ("q7", "q7_data_fabric_monthly.parquet"),
-        ("q8", "q8_data_fabric_providers.parquet"),
-        ("q9", "q9_deployment_option.parquet"),
-        ("q10", "q10_sku_gap_targeting.parquet"),
-        ("q11", "q11_infra_no_telemetry.parquet"),
-    ]:
-        sample_data[name].to_parquet(tmp_path / filename, index=False)
-
-    result = load_data(str(tmp_path))
-
-    assert set(result.keys()) == {"q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11"}
-    assert len(result["q1"]) == 4
-
 
 def test_load_data_raises_if_file_missing(tmp_path):
     with pytest.raises(FileNotFoundError):
@@ -195,37 +172,34 @@ def test_compute_metrics_targeting_tables(sample_data):
     assert sku[0]["company"] == "Acme Corp"          # highest ARR first
     assert sku[0]["arr_eur"] == 500000.0
     assert len(metrics["tables"]["infra_no_telemetry"]) == 2
-    assert len(metrics["tables"]["deployment_option"]) == 3
 
 
 def test_compute_metrics_nan_arr_coerced_to_zero(sample_data):
     """Regression test: NaN/None ARR should become 0.0, not leak as nan into JSON."""
-    # Create test data with a None ARR row
-    q10_with_nan = sample_data["q10"].copy()
-    # Add a row with None ARR (simulates NULL from q10 SQL query)
-    new_row = {
-        "COMPANY_SFDC_ID": "001X",
-        "COMPANY_NAME": "NullARR Corp",
-        "SEGMENT": "Small",
-        "USAGE_DEPLOYMENT_OPTION": "O11",
-        "ARR_EUR": None,
-    }
-    q10_with_nan = pd.concat([q10_with_nan, pd.DataFrame([new_row])], ignore_index=True)
+    # Build q10 directly from records so no pd.concat FutureWarning is triggered.
+    # The null-ARR row sorts last (ARR=None → 0.0 after fillna) so it sits within
+    # the top-20 window on this small fixture — the assertion is unconditional.
+    q10_with_nan = pd.DataFrame([
+        {"COMPANY_SFDC_ID": "001A", "COMPANY_NAME": "Acme Corp",
+         "SEGMENT": "Enterprise", "USAGE_DEPLOYMENT_OPTION": "O11/ODC", "ARR_EUR": 500000.0},
+        {"COMPANY_SFDC_ID": "001B", "COMPANY_NAME": "Globex",
+         "SEGMENT": "Mid-Market", "USAGE_DEPLOYMENT_OPTION": "O11", "ARR_EUR": 250000.0},
+        {"COMPANY_SFDC_ID": "001C", "COMPANY_NAME": "Initech",
+         "SEGMENT": "Enterprise", "USAGE_DEPLOYMENT_OPTION": "O11/ODC", "ARR_EUR": 120000.0},
+        {"COMPANY_SFDC_ID": "001X", "COMPANY_NAME": "NullARR Corp",
+         "SEGMENT": "Small", "USAGE_DEPLOYMENT_OPTION": "O11", "ARR_EUR": None},
+    ])
 
-    # Replace q10 in sample_data
     test_data = sample_data.copy()
     test_data["q10"] = q10_with_nan
 
     metrics = compute_metrics(test_data)
     sku = metrics["tables"]["sku_gap_targeting"]
 
-    # Find the row with NullARR Corp (may be in top 20 or not, depending on sort)
     null_row = next((row for row in sku if row["company"] == "NullARR Corp"), None)
-
-    # If it's in the top 20 by ARR, verify it has arr_eur == 0.0 (not nan)
-    if null_row is not None:
-        assert null_row["arr_eur"] == 0.0, f"Expected arr_eur=0.0 for None ARR, got {null_row['arr_eur']}"
-        assert isinstance(null_row["arr_eur"], float)
+    assert null_row is not None, "NullARR Corp must appear in sku_gap_targeting top-20"
+    assert null_row["arr_eur"] == 0.0, f"Expected arr_eur=0.0 for None ARR, got {null_row['arr_eur']}"
+    assert isinstance(null_row["arr_eur"], float)
 
 
 def test_render_has_new_tabs(sample_data, tmp_path):

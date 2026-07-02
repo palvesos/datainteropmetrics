@@ -274,7 +274,9 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
     df_prev = q7_full.iloc[1] if len(q7_full) > 1 else None
 
     def _pct_delta(cur, prev):
-        return float((cur - prev) / prev * 100) if prev not in (None, 0) else 0.0
+        if prev is None or pd.isna(prev) or prev == 0:
+            return 0.0
+        return float((cur - prev) / prev * 100)
 
     df_connections = int(df_cur["TOTAL_CONNECTIONS"])
     df_tenants = int(df_cur["UNIQUE_TENANTS"])
@@ -293,7 +295,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
         for _, row in q1.iterrows()
     ]
 
-    # --- Targeting (q10 SKU gap, q11 no-telemetry) + deployment table (q9) ---
+    # --- Targeting (q10 SKU gap, q11 no-telemetry) ---
     q10 = data["q10"]
     arr_at_risk = float(q10["ARR_EUR"].fillna(0).sum())
     sku_gap_count = int(len(q10))
@@ -306,12 +308,6 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
         {"company": r["COMPANY_NAME"], "arch": r["ARCHITECTURE_TYPE"],
          "deployment": r["USAGE_DEPLOYMENT_OPTION"], "activation_code": r["ACTIVATION_CODE"]}
         for _, r in data["q11"].head(20).iterrows()
-    ]
-    deployment_option = [
-        {"option": r["USAGE_DEPLOYMENT_OPTION"], "customers": int(r["TOTAL_CUSTOMERS"]),
-         "with_agents": int(r["CUSTOMERS_WITH_AGENTS"]), "adoption_pct": float(r["ADOPTION_RATE_PCT"]),
-         "agents": int(r["TOTAL_AGENTS"]), "executions": int(r["TOTAL_EXECUTIONS"])}
-        for _, r in data["q9"].iterrows()
     ]
 
     return {
@@ -363,7 +359,6 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "adoption_trend": table_rows,
             "sku_gap_targeting": sku_gap_targeting,
             "infra_no_telemetry": infra_no_telemetry,
-            "deployment_option": deployment_option,
         },
     }
 
