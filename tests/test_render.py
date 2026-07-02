@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -195,3 +196,33 @@ def test_compute_metrics_targeting_tables(sample_data):
     assert sku[0]["arr_eur"] == 500000.0
     assert len(metrics["tables"]["infra_no_telemetry"]) == 2
     assert len(metrics["tables"]["deployment_option"]) == 3
+
+
+def test_compute_metrics_nan_arr_coerced_to_zero(sample_data):
+    """Regression test: NaN/None ARR should become 0.0, not leak as nan into JSON."""
+    # Create test data with a None ARR row
+    q10_with_nan = sample_data["q10"].copy()
+    # Add a row with None ARR (simulates NULL from q10 SQL query)
+    new_row = {
+        "COMPANY_SFDC_ID": "001X",
+        "COMPANY_NAME": "NullARR Corp",
+        "SEGMENT": "Small",
+        "USAGE_DEPLOYMENT_OPTION": "O11",
+        "ARR_EUR": None,
+    }
+    q10_with_nan = pd.concat([q10_with_nan, pd.DataFrame([new_row])], ignore_index=True)
+
+    # Replace q10 in sample_data
+    test_data = sample_data.copy()
+    test_data["q10"] = q10_with_nan
+
+    metrics = compute_metrics(test_data)
+    sku = metrics["tables"]["sku_gap_targeting"]
+
+    # Find the row with NullARR Corp (may be in top 20 or not, depending on sort)
+    null_row = next((row for row in sku if row["company"] == "NullARR Corp"), None)
+
+    # If it's in the top 20 by ARR, verify it has arr_eur == 0.0 (not nan)
+    if null_row is not None:
+        assert null_row["arr_eur"] == 0.0, f"Expected arr_eur=0.0 for None ARR, got {null_row['arr_eur']}"
+        assert isinstance(null_row["arr_eur"], float)

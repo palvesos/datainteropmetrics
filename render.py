@@ -299,7 +299,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
     sku_gap_count = int(len(q10))
     sku_gap_targeting = [
         {"company": r["COMPANY_NAME"], "segment": r["SEGMENT"],
-         "deployment": r["USAGE_DEPLOYMENT_OPTION"], "arr_eur": float(r["ARR_EUR"] or 0)}
+         "deployment": r["USAGE_DEPLOYMENT_OPTION"], "arr_eur": float(r["ARR_EUR"]) if pd.notna(r["ARR_EUR"]) else 0.0}
         for _, r in q10.sort_values("ARR_EUR", ascending=False).head(20).iterrows()
     ]
     infra_no_telemetry = [
