@@ -14,6 +14,11 @@ def load_data(data_dir: str = "data") -> dict:
         "q4": "q4_executions.parquet",
         "q5": "q5_ao_usage.parquet",
         "q6": "q6_population.parquet",
+        "q7": "q7_data_fabric_monthly.parquet",
+        "q8": "q8_data_fabric_providers.parquet",
+        "q9": "q9_deployment_option.parquet",
+        "q10": "q10_sku_gap_targeting.parquet",
+        "q11": "q11_infra_no_telemetry.parquet",
     }
     result = {}
     for key, filename in file_map.items():

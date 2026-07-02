@@ -16,18 +16,38 @@ def test_load_data_returns_six_keys(tmp_path, sample_data):
         ("q4", "q4_executions.parquet"),
         ("q5", "q5_ao_usage.parquet"),
         ("q6", "q6_population.parquet"),
+        ("q7", "q7_data_fabric_monthly.parquet"),
+        ("q8", "q8_data_fabric_providers.parquet"),
+        ("q9", "q9_deployment_option.parquet"),
+        ("q10", "q10_sku_gap_targeting.parquet"),
+        ("q11", "q11_infra_no_telemetry.parquet"),
     ]:
         sample_data[name].to_parquet(tmp_path / filename, index=False)
 
     result = load_data(str(tmp_path))
 
-    assert set(result.keys()) == {"q1", "q2", "q3", "q4", "q5", "q6"}
+    assert set(result.keys()) == {"q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10", "q11"}
     assert len(result["q1"]) == 4
 
 
 def test_load_data_raises_if_file_missing(tmp_path):
     with pytest.raises(FileNotFoundError):
         load_data(str(tmp_path))
+
+
+def test_load_data_returns_eleven_keys(tmp_path, sample_data):
+    files = {
+        "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
+        "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
+        "q5": "q5_ao_usage.parquet", "q6": "q6_population.parquet",
+        "q7": "q7_data_fabric_monthly.parquet", "q8": "q8_data_fabric_providers.parquet",
+        "q9": "q9_deployment_option.parquet", "q10": "q10_sku_gap_targeting.parquet",
+        "q11": "q11_infra_no_telemetry.parquet",
+    }
+    for key, fn in files.items():
+        sample_data[key].to_parquet(tmp_path / fn, index=False)
+    result = load_data(str(tmp_path))
+    assert set(result.keys()) == set(files.keys())
 
 
 # --- compute_metrics ---
