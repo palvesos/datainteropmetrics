@@ -1,8 +1,16 @@
 # Data Interoperability Dashboard v2 — Design Spec
 
 **Date:** 2026-07-02
-**Status:** Draft (pending user review)
+**Status:** Approved; refined by the implementation plan.
 **Builds on:** the v1 dashboard (`render.py`, `templates/report.html.j2`, `queries/q1–q6`, `/refresh`).
+
+> **Revision (2026-07-02, during planning):** deliverable A's single month×provider
+> Data Fabric query is split into **q7** (monthly totals — exact distinct tenants/
+> customers) + **q8** (last-complete-month provider breakdown). Pre-aggregated
+> per-provider rows can't yield exact cross-provider distinct counts, so the split is
+> required for correctness. This shifts numbering: deployment-option → **q9**,
+> SKU-gap → **q10**, infra-no-telemetry → **q11**. See
+> `docs/superpowers/plans/2026-07-02-data-interop-dashboard-v2.md`.
 
 ---
 
