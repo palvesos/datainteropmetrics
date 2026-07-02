@@ -98,6 +98,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "adoption_trend", "population_donut",
         "executions_bar", "ao_usage_line",
         "product_family_bar", "arch_type_bar",
+        "data_fabric_trend", "data_fabric_providers", "deployment_option_bar",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -171,3 +172,11 @@ def test_compute_metrics_df_tenants_last_full_month(sample_data):
 def test_compute_metrics_df_providers_count(sample_data):
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     assert metrics["kpis"]["df_providers"]["value"] == 4
+
+
+def test_compute_metrics_new_charts_present(sample_data):
+    metrics = compute_metrics(sample_data)
+    for name in ("data_fabric_trend", "data_fabric_providers", "deployment_option_bar"):
+        assert name in metrics["charts"], f"missing {name}"
+        assert len(metrics["charts"][name]["data"]) > 0
+        assert "layout" in metrics["charts"][name]

@@ -120,6 +120,65 @@ def _chart_ao_usage_line(df: pd.DataFrame) -> dict:
     }
 
 
+def _chart_data_fabric_trend(df: pd.DataFrame) -> dict:
+    df = df.sort_values("MONTH")
+    months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+    return {
+        "data": [
+            {"x": months, "y": df["TOTAL_CONNECTIONS"].tolist(), "type": "bar",
+             "name": "Connections", "marker": {"color": "#60a5fa"}, "yaxis": "y"},
+            {"x": months, "y": df["UNIQUE_TENANTS"].tolist(), "type": "scatter",
+             "mode": "lines+markers", "name": "Tenants", "line": {"color": "#34d399", "width": 2}, "yaxis": "y2"},
+        ],
+        "layout": {
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "yaxis": {"title": "Connections", "gridcolor": "#334155"},
+            "yaxis2": {"title": "Tenants", "overlaying": "y", "side": "right", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b"}, "margin": {"t": 20, "b": 50, "l": 70, "r": 60}, "autosize": True,
+        },
+    }
+
+
+def _chart_data_fabric_providers(df: pd.DataFrame) -> dict:
+    df = df.copy()
+    df["label"] = df["HOSTING"] + " / " + df["ENGINE"]
+    df = df.sort_values("TOTAL_CONNECTIONS", ascending=True)
+    labels = df["label"].tolist()
+    return {
+        "data": [
+            {"y": labels, "x": df["TOTAL_CONNECTIONS"].tolist(), "type": "bar", "orientation": "h",
+             "name": "Connections", "marker": {"color": "#60a5fa"}},
+            {"y": labels, "x": df["UNIQUE_TENANTS"].tolist(), "type": "bar", "orientation": "h",
+             "name": "Tenants", "marker": {"color": "#34d399"}},
+        ],
+        "layout": {
+            "barmode": "group",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"gridcolor": "#334155"}, "legend": {"bgcolor": "#1e293b"},
+            "margin": {"t": 20, "b": 50, "l": 130, "r": 20}, "autosize": True,
+        },
+    }
+
+
+def _chart_deployment_option_bar(df: pd.DataFrame) -> dict:
+    df = df.sort_values("USAGE_DEPLOYMENT_OPTION")
+    opts = df["USAGE_DEPLOYMENT_OPTION"].tolist()
+    return {
+        "data": [
+            {"x": opts, "y": df["TOTAL_CUSTOMERS"].tolist(), "type": "bar",
+             "name": "Customers", "marker": {"color": "#334155"}},
+            {"x": opts, "y": df["CUSTOMERS_WITH_AGENTS"].tolist(), "type": "bar",
+             "name": "With ODC Agents", "marker": {"color": "#34d399"}},
+        ],
+        "layout": {
+            "barmode": "overlay",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"gridcolor": "#334155"}, "yaxis": {"title": "Customers", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b"}, "margin": {"t": 20, "b": 50, "l": 60, "r": 20}, "autosize": True,
+        },
+    }
+
+
 def _chart_product_family_bar(df: pd.DataFrame) -> dict:
     df = df.sort_values("INTEROP_ACTIVE", ascending=True)
     labels = (df["PRODUCT_FAMILY"] + " / " + df["PRODUCT_CATEGORY"]).tolist()
@@ -273,6 +332,9 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "ao_usage_line": _chart_ao_usage_line(data["q5"]),
             "product_family_bar": _chart_product_family_bar(data["q2"]),
             "arch_type_bar": _chart_arch_type_bar(data["q3"]),
+            "data_fabric_trend": _chart_data_fabric_trend(data["q7"]),
+            "data_fabric_providers": _chart_data_fabric_providers(data["q8"]),
+            "deployment_option_bar": _chart_deployment_option_bar(data["q9"]),
         },
         "tables": {
             "adoption_trend": table_rows,
