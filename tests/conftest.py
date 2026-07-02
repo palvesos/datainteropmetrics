@@ -46,4 +46,42 @@ def sample_data():
         "HAS_SKU_INTEROPERABILITY": [False, False, True],
         "COMPANY_COUNT": [182420, 430, 3451],
     })
-    return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6}
+    q7 = pd.DataFrame({
+        "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
+        "UNIQUE_TENANTS": [160, 178, 150, 120],
+        "UNIQUE_CUSTOMERS": [140, 155, 130, 100],
+        "TOTAL_CONNECTIONS": [18000, 21000, 17500, 14000],
+    })
+    q8 = pd.DataFrame({
+        "PROVIDER": ["o11cloud_mssql", "o11cloud_oracle", "o11selfhosted_mssql", "o11selfhosted_oracle"],
+        "HOSTING": ["cloud", "cloud", "self-hosted", "self-hosted"],
+        "ENGINE": ["mssql", "oracle", "mssql", "oracle"],
+        "UNIQUE_TENANTS": [158, 11, 6, 2],
+        "UNIQUE_CUSTOMERS": [140, 10, 5, 2],
+        "TOTAL_CONNECTIONS": [18307, 1136, 412, 112],
+    })
+    q9 = pd.DataFrame({
+        "USAGE_DEPLOYMENT_OPTION": ["O11", "ODC", "O11/ODC"],
+        "TOTAL_CUSTOMERS": [900, 400, 658],
+        "CUSTOMERS_WITH_AGENTS": [50, 300, 409],
+        "ADOPTION_RATE_PCT": [5.6, 75.0, 62.2],
+        "TOTAL_AGENTS": [200, 8000, 11852],
+        "TOTAL_EXECUTIONS": [150, 6000, 9077],
+    })
+    q10 = pd.DataFrame({
+        "COMPANY_SFDC_ID": ["001A", "001B", "001C"],
+        "COMPANY_NAME": ["Acme Corp", "Globex", "Initech"],
+        "SEGMENT": ["Enterprise", "Mid-Market", "Enterprise"],
+        "USAGE_DEPLOYMENT_OPTION": ["O11/ODC", "O11", "O11/ODC"],
+        "ARR_EUR": [500000.0, 250000.0, 120000.0],
+    })
+    q11 = pd.DataFrame({
+        "ACTIVATION_CODE": ["AC1", "AC2"],
+        "COMPANY_SFDC_ID": ["001D", "001E"],
+        "COMPANY_NAME": ["Umbrella", "Stark Ind"],
+        "ARCHITECTURE_TYPE": ["cloud", "on-premises"],
+        "INFRASTRUCTURE_STATUS": ["active", "active"],
+        "USAGE_DEPLOYMENT_OPTION": ["O11", "O11/ODC"],
+    })
+    return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
+            "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11}
