@@ -12,7 +12,7 @@
 
 - Snowflake connection name is `os`; run SQL via `uvx --python 3.13 --from snowflake-cli snow sql --query "$(cat <file>)" --format json --connection os`.
 - snow CLI serializes `DECIMAL`/`NUMERIC` as JSON **strings** — every numeric column must be coerced with `pd.to_numeric()` before `to_parquet`.
-- Customer-scoped queries filter current customers with: `MONTH_DT = (SELECT MAX(MONTH_DT) FROM CANONICAL.CUSTOMERSUCCESS.CUSTOMERUNIFIEDINFO) AND IS_CURRENT_CUSTOMER AND IS_CUSTOMER_POLICY`.
+- Customer-scoped queries filter current customers with: `IS_LAST_MONTH_REPORTED AND IS_CURRENT_CUSTOMER AND IS_CUSTOMER_POLICY`. (NOTE: use `IS_LAST_MONTH_REPORTED`, NOT `MONTH_DT = MAX(MONTH_DT)` — validated 2026-07-02: `MAX(MONTH_DT)` is the current open month (2026-07) with ARR_EUR unpopulated for all rows; `IS_LAST_MONTH_REPORTED` is the last fully-reported month (2026-05) with ARR populated.)
 - SCD2 joins use `event_date::date >= t.date_from AND event_date::date < t.date_to`.
 - Provider parsing: `HOSTING = cloud|self-hosted` from `ILIKE 'o11cloud%'`/`'o11selfhosted%'`; `ENGINE = SPLIT_PART(provider,'_',2)`.
 - Tests use in-memory fixtures only — no live Snowflake in the test suite. Live grain validation happens per SQL task and feeds `docs/data-context/`.
