@@ -1,6 +1,11 @@
 -- Data context: EXTERNALCONNECTIONCOUNT, INFRASTRUCTURE (SCD2), COMPANY. Pattern: SCD2 join, provider filter.
 -- NOTE: event_sent is VARCHAR (ISO-8601); cast to TIMESTAMP before date operations.
 -- NOTE: QUALIFY partition = source natural key (tenant, environment_id, event_provider, event_sent); dedupes infra SCD2 fan-out only.
+-- NOTE: comp.type IN ('customer','partner') intentionally excludes non-paying telemetry. Verified 2026-07-02:
+--   the raw-vs-q7 gap is 100% this filter (infra SCD2 join drops nothing) and is dominated by OutSystems
+--   'internal' tenants (dogfooding) plus some 'prospect customer'. The gap is larger in older months because
+--   early Data Fabric usage was internal-dominated pre-GA; this is a real adoption curve, not a data defect.
+--   COMPANY.type reflects CURRENT status (also 'former customer', 'internal', 'prospect customer', etc.).
 WITH deduped AS (
   SELECT
     ext.event_sent,

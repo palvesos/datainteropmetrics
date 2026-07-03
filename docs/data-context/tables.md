@@ -40,7 +40,15 @@
 
 ## CANONICAL.CORE.COMPANY
 - **Purpose:** company master. **Key:** `company_id`, `company_sfdc_id`,
-  `company_name`, `type` ('customer'|'partner'|'licensee'), `region`, `geo`.
+  `company_name`, `type`, `region`, `geo`.
+- **`type` domain (verified 2026-07-02):** `customer`, `partner`, `licensee`,
+  `former customer`, `former partner`, `prospect customer`, `prospect partner`,
+  `internal`, `undefined`, `other`. **NOT** just customer/partner/licensee.
+- **Gotcha:** `type` reflects a company's **current** status, not its status at
+  any past point. A churned customer is now `former customer`; OutSystems' own
+  tenants are `internal`. Filtering telemetry by `type IN ('customer','partner')`
+  therefore drops historical rows for since-churned/internal tenants — the older
+  the month, the larger this exclusion (see q7 note).
 
 ## CANONICAL.CUSTOMERSUCCESS.TENANTMETADATA
 - **Key:** `tenant_id`, `ODC_RING`.
