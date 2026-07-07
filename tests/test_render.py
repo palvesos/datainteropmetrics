@@ -239,3 +239,15 @@ def test_compute_metrics_df_trialing_connections_mom_delta(sample_data):
     assert kpi["delta"] == pytest.approx(30.0, rel=1e-3)
     assert kpi["is_pct"] is True
     assert kpi["direction"] == "up"
+
+
+def test_data_fabric_trend_has_trialing_trace(sample_data):
+    metrics = compute_metrics(sample_data)
+    trend = metrics["charts"]["data_fabric_trend"]
+    names = [t.get("name") for t in trend["data"]]
+    assert "Customer/Partner" in names
+    assert "Trialing" in names
+    assert "Tenants" in names
+    # Trialing connections series, months sorted ascending (Mar..Jun): 800,1000,1300,1100
+    trialing = next(t for t in trend["data"] if t.get("name") == "Trialing")
+    assert trialing["y"] == [800, 1000, 1300, 1100]

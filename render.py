@@ -121,17 +121,22 @@ def _chart_ao_usage_line(df: pd.DataFrame) -> dict:
     }
 
 
-def _chart_data_fabric_trend(df: pd.DataFrame) -> dict:
+def _chart_data_fabric_trend(df: pd.DataFrame, trialing_df: pd.DataFrame) -> dict:
     df = df.sort_values("MONTH")
     months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+    trialing_df = trialing_df.sort_values("MONTH")
+    trialing_months = trialing_df["MONTH"].dt.strftime("%Y-%m").tolist()
     return {
         "data": [
             {"x": months, "y": df["TOTAL_CONNECTIONS"].tolist(), "type": "bar",
-             "name": "Connections", "marker": {"color": "#60a5fa"}, "yaxis": "y"},
+             "name": "Customer/Partner", "marker": {"color": "#60a5fa"}, "yaxis": "y"},
+            {"x": trialing_months, "y": trialing_df["TOTAL_CONNECTIONS"].tolist(), "type": "bar",
+             "name": "Trialing", "marker": {"color": "#f59e0b"}, "yaxis": "y"},
             {"x": months, "y": df["UNIQUE_TENANTS"].tolist(), "type": "scatter",
              "mode": "lines+markers", "name": "Tenants", "line": {"color": "#34d399", "width": 2}, "yaxis": "y2"},
         ],
         "layout": {
+            "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
             "yaxis": {"title": "Connections", "gridcolor": "#334155"},
             "yaxis2": {"title": "Tenants", "overlaying": "y", "side": "right", "gridcolor": "#334155"},
@@ -366,7 +371,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "ao_usage_line": _chart_ao_usage_line(data["q5"]),
             "product_family_bar": _chart_product_family_bar(data["q2"]),
             "arch_type_bar": _chart_arch_type_bar(data["q3"]),
-            "data_fabric_trend": _chart_data_fabric_trend(data["q7"]),
+            "data_fabric_trend": _chart_data_fabric_trend(data["q7"], data["q12"]),
             "data_fabric_providers": _chart_data_fabric_providers(data["q8"]),
             "deployment_option_bar": _chart_deployment_option_bar(data["q9"]),
         },
