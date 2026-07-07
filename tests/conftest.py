@@ -83,5 +83,11 @@ def sample_data():
         "INFRASTRUCTURE_STATUS": ["active", "active"],
         "USAGE_DEPLOYMENT_OPTION": ["O11", "O11/ODC"],
     })
+    q12 = pd.DataFrame({
+        "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
+        "UNIQUE_TENANTS": [22, 25, 20, 15],
+        "UNIQUE_CUSTOMERS": [18, 20, 16, 12],
+        "TOTAL_CONNECTIONS": [1100, 1300, 1000, 800],
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
-            "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11}
+            "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12}

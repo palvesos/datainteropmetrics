@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_eleven_keys(tmp_path, sample_data):
+def test_load_data_returns_twelve_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -21,6 +21,7 @@ def test_load_data_returns_eleven_keys(tmp_path, sample_data):
         "q7": "q7_data_fabric_monthly.parquet", "q8": "q8_data_fabric_providers.parquet",
         "q9": "q9_deployment_option.parquet", "q10": "q10_sku_gap_targeting.parquet",
         "q11": "q11_infra_no_telemetry.parquet",
+        "q12": "q12_data_fabric_trialing_monthly.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
