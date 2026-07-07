@@ -196,6 +196,20 @@
       <div class="kpi-label">Active Providers</div>
       <div class="kpi-value kpi-executions">{{ kpis.df_providers.value }}</div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Trialing Conn. (last full mo.)</div>
+      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_trialing_connections.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_trialing_connections.direction }}">
+        {{ "▲" if kpis.df_trialing_connections.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_trialing_connections.delta) }}% MoM
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Trialing Tenants (last full mo.)</div>
+      <div class="kpi-value kpi-adoption">{{ "{:,}".format(kpis.df_trialing_tenants.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_trialing_tenants.direction }}">
+        {{ "▲" if kpis.df_trialing_tenants.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_trialing_tenants.delta) }}% MoM
+      </div>
+    </div>
   </div>
   <div class="chart-row">
     <div class="section"><h3>Connector Usage Trend (12 mo.)</h3><div id="chart-df-trend" class="chart-container tall"></div></div>

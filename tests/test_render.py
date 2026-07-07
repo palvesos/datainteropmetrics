@@ -251,3 +251,14 @@ def test_data_fabric_trend_has_trialing_trace(sample_data):
     # Trialing connections series, months sorted ascending (Mar..Jun): 800,1000,1300,1100
     trialing = next(t for t in trend["data"] if t.get("name") == "Trialing")
     assert trialing["y"] == [800, 1000, 1300, 1100]
+
+
+def test_render_shows_trialing_cards(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    # Card labels are unique to the template (the "Trialing" chart trace name has no comma-formatted value)
+    assert "Trialing Conn. (last full mo.)" in content
+    assert "Trialing Tenants (last full mo.)" in content
+    assert "1,300" in content   # trialing connections, last full month, comma-formatted (KPI card only)
