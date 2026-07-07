@@ -285,6 +285,16 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
     tenant_delta = _pct_delta(df_cur["UNIQUE_TENANTS"], df_prev["UNIQUE_TENANTS"] if df_prev is not None else None)
     df_providers = int((data["q8"]["TOTAL_CONNECTIONS"] > 0).sum())
 
+    # --- Data Fabric trialing (q12 monthly totals, last complete month) ---
+    q12 = data["q12"].sort_values("MONTH", ascending=False).reset_index(drop=True)
+    q12_full = q12[q12["MONTH"] < current_month_start].reset_index(drop=True)
+    dft_cur = q12_full.iloc[0] if len(q12_full) else q12.iloc[0]
+    dft_prev = q12_full.iloc[1] if len(q12_full) > 1 else None
+    df_trialing_connections = int(dft_cur["TOTAL_CONNECTIONS"])
+    df_trialing_tenants = int(dft_cur["UNIQUE_TENANTS"])
+    trialing_conn_delta = _pct_delta(dft_cur["TOTAL_CONNECTIONS"], dft_prev["TOTAL_CONNECTIONS"] if dft_prev is not None else None)
+    trialing_tenant_delta = _pct_delta(dft_cur["UNIQUE_TENANTS"], dft_prev["UNIQUE_TENANTS"] if dft_prev is not None else None)
+
     table_rows = [
         {
             "month": row["MONTH_START"].strftime("%Y-%m"),
@@ -340,6 +350,10 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
                                "direction": "up" if conn_delta >= 0 else "down"},
             "df_tenants": {"value": df_tenants, "delta": round(tenant_delta, 1), "is_pct": True,
                            "direction": "up" if tenant_delta >= 0 else "down"},
+            "df_trialing_connections": {"value": df_trialing_connections, "delta": round(trialing_conn_delta, 1), "is_pct": True,
+                                        "direction": "up" if trialing_conn_delta >= 0 else "down"},
+            "df_trialing_tenants": {"value": df_trialing_tenants, "delta": round(trialing_tenant_delta, 1), "is_pct": True,
+                                    "direction": "up" if trialing_tenant_delta >= 0 else "down"},
             "df_providers": {"value": df_providers},
             "arr_at_risk": {"value": round(arr_at_risk, 2)},
         },

@@ -219,3 +219,23 @@ def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):
     content = open(output).read()
     assert "21,000" in content        # df_connections last full month
     assert "Acme Corp" in content     # top SKU-gap target
+
+
+def test_compute_metrics_df_trialing_connections_last_full_month(sample_data):
+    # today=2026-06-15 → June is partial; May (1300) is the last full month
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    assert metrics["kpis"]["df_trialing_connections"]["value"] == 1300
+
+
+def test_compute_metrics_df_trialing_tenants_last_full_month(sample_data):
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    assert metrics["kpis"]["df_trialing_tenants"]["value"] == 25
+
+
+def test_compute_metrics_df_trialing_connections_mom_delta(sample_data):
+    # May 1300 vs April 1000 → +30.0%
+    metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
+    kpi = metrics["kpis"]["df_trialing_connections"]
+    assert kpi["delta"] == pytest.approx(30.0, rel=1e-3)
+    assert kpi["is_pct"] is True
+    assert kpi["direction"] == "up"
