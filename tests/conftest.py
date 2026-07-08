@@ -50,7 +50,7 @@ def sample_data():
         "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
         "UNIQUE_TENANTS": [160, 178, 150, 120],
         "UNIQUE_CUSTOMERS": [140, 155, 130, 100],
-        "TOTAL_CONNECTIONS": [18000, 21000, 17500, 14000],
+        "TOTAL_CONNECTORS": [18000, 21000, 17500, 14000],
     })
     q8 = pd.DataFrame({
         "PROVIDER": ["o11cloud_mssql", "o11cloud_oracle", "o11selfhosted_mssql", "o11selfhosted_oracle"],
@@ -58,7 +58,7 @@ def sample_data():
         "ENGINE": ["mssql", "oracle", "mssql", "oracle"],
         "UNIQUE_TENANTS": [158, 11, 6, 2],
         "UNIQUE_CUSTOMERS": [140, 10, 5, 2],
-        "TOTAL_CONNECTIONS": [18307, 1136, 412, 112],
+        "TOTAL_CONNECTORS": [18307, 1136, 412, 112],
     })
     q9 = pd.DataFrame({
         "USAGE_DEPLOYMENT_OPTION": ["O11", "ODC", "O11/ODC"],
@@ -87,7 +87,7 @@ def sample_data():
         "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
         "UNIQUE_TENANTS": [22, 25, 20, 15],
         "UNIQUE_CUSTOMERS": [18, 20, 16, 12],
-        "TOTAL_CONNECTIONS": [1100, 1300, 1000, 800],
+        "TOTAL_CONNECTORS": [1100, 1300, 1000, 800],
     })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12}

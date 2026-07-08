@@ -179,10 +179,10 @@
 <div id="tab-datafabric" class="tab-content">
   <div class="kpi-grid">
     <div class="kpi-card">
-      <div class="kpi-label">DF Connections (last full mo.)</div>
-      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_connections.value) }}</div>
-      <div class="kpi-delta {{ kpis.df_connections.direction }}">
-        {{ "▲" if kpis.df_connections.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_connections.delta) }}% MoM
+      <div class="kpi-label">DF Connectors (last full mo.)</div>
+      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_connectors.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_connectors.direction }}">
+        {{ "▲" if kpis.df_connectors.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_connectors.delta) }}% MoM
       </div>
     </div>
     <div class="kpi-card">
@@ -197,10 +197,10 @@
       <div class="kpi-value kpi-executions">{{ kpis.df_providers.value }}</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label">Trialing Conn. (last full mo.)</div>
-      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_trialing_connections.value) }}</div>
-      <div class="kpi-delta {{ kpis.df_trialing_connections.direction }}">
-        {{ "▲" if kpis.df_trialing_connections.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_trialing_connections.delta) }}% MoM
+      <div class="kpi-label">Trialing Connectors (last full mo.)</div>
+      <div class="kpi-value kpi-customers">{{ "{:,}".format(kpis.df_trialing_connectors.value) }}</div>
+      <div class="kpi-delta {{ kpis.df_trialing_connectors.direction }}">
+        {{ "▲" if kpis.df_trialing_connectors.direction == "up" else "▼" }} {{ "%+.1f"|format(kpis.df_trialing_connectors.delta) }}% MoM
       </div>
     </div>
     <div class="kpi-card">

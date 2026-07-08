@@ -139,10 +139,10 @@ def test_render_output_has_four_tabs(sample_data, tmp_path):
         assert tab in content
 
 
-def test_compute_metrics_df_connections_last_full_month(sample_data):
+def test_compute_metrics_df_connectors_last_full_month(sample_data):
     # Inject today=2026-06-15 so June is the partial current month; May (21000) is last full month
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
-    assert metrics["kpis"]["df_connections"]["value"] == 21000
+    assert metrics["kpis"]["df_connectors"]["value"] == 21000
 
 def test_compute_metrics_df_tenants_last_full_month(sample_data):
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
@@ -217,14 +217,14 @@ def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):
     output = str(tmp_path / "report.html")
     render(metrics, output_path=output)
     content = open(output).read()
-    assert "21,000" in content        # df_connections last full month
+    assert "21,000" in content        # df_connectors last full month
     assert "Acme Corp" in content     # top SKU-gap target
 
 
-def test_compute_metrics_df_trialing_connections_last_full_month(sample_data):
+def test_compute_metrics_df_trialing_connectors_last_full_month(sample_data):
     # today=2026-06-15 → June is partial; May (1300) is the last full month
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
-    assert metrics["kpis"]["df_trialing_connections"]["value"] == 1300
+    assert metrics["kpis"]["df_trialing_connectors"]["value"] == 1300
 
 
 def test_compute_metrics_df_trialing_tenants_last_full_month(sample_data):
@@ -232,10 +232,10 @@ def test_compute_metrics_df_trialing_tenants_last_full_month(sample_data):
     assert metrics["kpis"]["df_trialing_tenants"]["value"] == 25
 
 
-def test_compute_metrics_df_trialing_connections_mom_delta(sample_data):
+def test_compute_metrics_df_trialing_connectors_mom_delta(sample_data):
     # May 1300 vs April 1000 → +30.0%
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
-    kpi = metrics["kpis"]["df_trialing_connections"]
+    kpi = metrics["kpis"]["df_trialing_connectors"]
     assert kpi["delta"] == pytest.approx(30.0, rel=1e-3)
     assert kpi["is_pct"] is True
     assert kpi["direction"] == "up"
@@ -259,6 +259,6 @@ def test_render_shows_trialing_cards(sample_data, tmp_path):
     render(metrics, output_path=output)
     content = open(output).read()
     # Card labels are unique to the template (the "Trialing" chart trace name has no comma-formatted value)
-    assert "Trialing Conn. (last full mo.)" in content
+    assert "Trialing Connectors (last full mo.)" in content
     assert "Trialing Tenants (last full mo.)" in content
     assert "1,300" in content   # trialing connections, last full month, comma-formatted (KPI card only)

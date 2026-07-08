@@ -128,9 +128,9 @@ def _chart_data_fabric_trend(df: pd.DataFrame, trialing_df: pd.DataFrame) -> dic
     trialing_months = trialing_df["MONTH"].dt.strftime("%Y-%m").tolist()
     return {
         "data": [
-            {"x": months, "y": df["TOTAL_CONNECTIONS"].tolist(), "type": "bar",
+            {"x": months, "y": df["TOTAL_CONNECTORS"].tolist(), "type": "bar",
              "name": "Customer/Partner", "marker": {"color": "#60a5fa"}, "yaxis": "y"},
-            {"x": trialing_months, "y": trialing_df["TOTAL_CONNECTIONS"].tolist(), "type": "bar",
+            {"x": trialing_months, "y": trialing_df["TOTAL_CONNECTORS"].tolist(), "type": "bar",
              "name": "Trialing", "marker": {"color": "#f59e0b"}, "yaxis": "y"},
             {"x": months, "y": df["UNIQUE_TENANTS"].tolist(), "type": "scatter",
              "mode": "lines+markers", "name": "Tenants", "line": {"color": "#34d399", "width": 2}, "yaxis": "y2"},
@@ -138,7 +138,7 @@ def _chart_data_fabric_trend(df: pd.DataFrame, trialing_df: pd.DataFrame) -> dic
         "layout": {
             "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
-            "yaxis": {"title": "Connections", "gridcolor": "#334155"},
+            "yaxis": {"title": "Connectors", "gridcolor": "#334155"},
             "yaxis2": {"title": "Tenants", "overlaying": "y", "side": "right", "gridcolor": "#334155"},
             "legend": {"bgcolor": "#1e293b"}, "margin": {"t": 20, "b": 50, "l": 70, "r": 60}, "autosize": True,
         },
@@ -148,12 +148,12 @@ def _chart_data_fabric_trend(df: pd.DataFrame, trialing_df: pd.DataFrame) -> dic
 def _chart_data_fabric_providers(df: pd.DataFrame) -> dict:
     df = df.copy()
     df["label"] = df["HOSTING"] + " / " + df["ENGINE"]
-    df = df.sort_values("TOTAL_CONNECTIONS", ascending=True)
+    df = df.sort_values("TOTAL_CONNECTORS", ascending=True)
     labels = df["label"].tolist()
     return {
         "data": [
-            {"y": labels, "x": df["TOTAL_CONNECTIONS"].tolist(), "type": "bar", "orientation": "h",
-             "name": "Connections", "marker": {"color": "#60a5fa"}},
+            {"y": labels, "x": df["TOTAL_CONNECTORS"].tolist(), "type": "bar", "orientation": "h",
+             "name": "Connectors", "marker": {"color": "#60a5fa"}},
             {"y": labels, "x": df["UNIQUE_TENANTS"].tolist(), "type": "bar", "orientation": "h",
              "name": "Tenants", "marker": {"color": "#34d399"}},
         ],
@@ -284,20 +284,20 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             return 0.0
         return float((cur - prev) / prev * 100)
 
-    df_connections = int(df_cur["TOTAL_CONNECTIONS"])
+    df_connectors = int(df_cur["TOTAL_CONNECTORS"])
     df_tenants = int(df_cur["UNIQUE_TENANTS"])
-    conn_delta = _pct_delta(df_cur["TOTAL_CONNECTIONS"], df_prev["TOTAL_CONNECTIONS"] if df_prev is not None else None)
+    conn_delta = _pct_delta(df_cur["TOTAL_CONNECTORS"], df_prev["TOTAL_CONNECTORS"] if df_prev is not None else None)
     tenant_delta = _pct_delta(df_cur["UNIQUE_TENANTS"], df_prev["UNIQUE_TENANTS"] if df_prev is not None else None)
-    df_providers = int((data["q8"]["TOTAL_CONNECTIONS"] > 0).sum())
+    df_providers = int((data["q8"]["TOTAL_CONNECTORS"] > 0).sum())
 
     # --- Data Fabric trialing (q12 monthly totals, last complete month) ---
     q12 = data["q12"].sort_values("MONTH", ascending=False).reset_index(drop=True)
     q12_full = q12[q12["MONTH"] < current_month_start].reset_index(drop=True)
     dft_cur = q12_full.iloc[0] if len(q12_full) else q12.iloc[0]
     dft_prev = q12_full.iloc[1] if len(q12_full) > 1 else None
-    df_trialing_connections = int(dft_cur["TOTAL_CONNECTIONS"])
+    df_trialing_connectors = int(dft_cur["TOTAL_CONNECTORS"])
     df_trialing_tenants = int(dft_cur["UNIQUE_TENANTS"])
-    trialing_conn_delta = _pct_delta(dft_cur["TOTAL_CONNECTIONS"], dft_prev["TOTAL_CONNECTIONS"] if dft_prev is not None else None)
+    trialing_conn_delta = _pct_delta(dft_cur["TOTAL_CONNECTORS"], dft_prev["TOTAL_CONNECTORS"] if dft_prev is not None else None)
     trialing_tenant_delta = _pct_delta(dft_cur["UNIQUE_TENANTS"], dft_prev["UNIQUE_TENANTS"] if dft_prev is not None else None)
 
     table_rows = [
@@ -351,12 +351,12 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
                 "is_pct": True,
                 "direction": "up" if ao_delta_pct >= 0 else "down",
             },
-            "df_connections": {"value": df_connections, "delta": round(conn_delta, 1), "is_pct": True,
-                               "direction": "up" if conn_delta >= 0 else "down"},
+            "df_connectors": {"value": df_connectors, "delta": round(conn_delta, 1), "is_pct": True,
+                              "direction": "up" if conn_delta >= 0 else "down"},
             "df_tenants": {"value": df_tenants, "delta": round(tenant_delta, 1), "is_pct": True,
                            "direction": "up" if tenant_delta >= 0 else "down"},
-            "df_trialing_connections": {"value": df_trialing_connections, "delta": round(trialing_conn_delta, 1), "is_pct": True,
-                                        "direction": "up" if trialing_conn_delta >= 0 else "down"},
+            "df_trialing_connectors": {"value": df_trialing_connectors, "delta": round(trialing_conn_delta, 1), "is_pct": True,
+                                       "direction": "up" if trialing_conn_delta >= 0 else "down"},
             "df_trialing_tenants": {"value": df_trialing_tenants, "delta": round(trialing_tenant_delta, 1), "is_pct": True,
                                     "direction": "up" if trialing_tenant_delta >= 0 else "down"},
             "df_providers": {"value": df_providers},
