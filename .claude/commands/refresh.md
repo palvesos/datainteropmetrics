@@ -50,12 +50,12 @@ Per-query values:
 | q4 | `queries/q4_executions.sql` | `data/q4_executions.parquet` | `'MONTH'` | — | `'ACTIVE_INFRA'`, `'PROD_EXECUTIONS'`, `'DEV_EXECUTIONS'`, `'NONPROD_EXECUTIONS'`, `'PROD_AO_USAGE'` |
 | q5 | `queries/q5_ao_usage.sql` | `data/q5_ao_usage.parquet` | `'REPORT_MONTH'` | — | `'ACTIVE_INFRA'`, `'PROD_AO_LAST_WEEK'`, `'DEV_AO_LAST_WEEK'`, `'PROD_AO_MAX_WEEK'`, `'DEV_AO_MAX_WEEK'` |
 | q6 | `queries/q6_population.sql` | `data/q6_population.parquet` | — | `'IS_INTEROPERABILITY'`, `'HAS_SKU_INTEROPERABILITY'` | `'COMPANY_COUNT'` |
-| q7 | `queries/q7_data_fabric_monthly.sql` | `data/q7_data_fabric_monthly.parquet` | `'MONTH'` | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTIONS'` |
-| q8 | `queries/q8_data_fabric_providers.sql` | `data/q8_data_fabric_providers.parquet` | — | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTIONS'` |
+| q7 | `queries/q7_data_fabric_monthly.sql` | `data/q7_data_fabric_monthly.parquet` | `'MONTH'` | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTORS'` |
+| q8 | `queries/q8_data_fabric_providers.sql` | `data/q8_data_fabric_providers.parquet` | — | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTORS'` |
 | q9 | `queries/q9_deployment_option.sql` | `data/q9_deployment_option.parquet` | — | — | `'TOTAL_CUSTOMERS'`, `'CUSTOMERS_WITH_AGENTS'`, `'ADOPTION_RATE_PCT'`, `'TOTAL_AGENTS'`, `'TOTAL_EXECUTIONS'` |
 | q10 | `queries/q10_sku_gap_targeting.sql` | `data/q10_sku_gap_targeting.parquet` | — | — | `'ARR_EUR'` |
 | q11 | `queries/q11_infra_no_telemetry.sql` | `data/q11_infra_no_telemetry.parquet` | — | — | — |
-| q12 | `queries/q12_data_fabric_trialing_monthly.sql` | `data/q12_data_fabric_trialing_monthly.parquet` | `'MONTH'` | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTIONS'` |
+| q12 | `queries/q12_data_fabric_trialing_monthly.sql` | `data/q12_data_fabric_trialing_monthly.parquet` | `'MONTH'` | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTORS'` |
 
 For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 
