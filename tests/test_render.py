@@ -212,6 +212,16 @@ def test_render_has_new_tabs(sample_data, tmp_path):
         assert tab in content
 
 
+def test_render_has_data_interoperability_tab(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "switchTab('datainterop')" in content
+    assert 'id="tab-datainterop"' in content
+    assert "Data InterOperability" in content
+
+
 def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     output = str(tmp_path / "report.html")
