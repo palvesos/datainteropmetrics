@@ -42,9 +42,27 @@
     .callout-value { font-size: 22px; font-weight: 700; color: #f59e0b; }
     .callout-text { font-size: 12px; color: #94a3b8; }
     @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .chart-row { grid-template-columns: 1fr; } }
+    .sql-block { margin-top: 10px; }
+    .sql-toggle { background: #0f172a; color: #60a5fa; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-family: inherit; letter-spacing: 0.03em; }
+    .sql-toggle:hover { border-color: #60a5fa; }
+    .sql-panel { position: relative; margin-top: 8px; border: 1px solid #334155; border-radius: 6px; background: #0b1220; }
+    .sql-copy { position: absolute; top: 8px; right: 8px; background: #1e293b; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 3px 8px; font-size: 10px; cursor: pointer; font-family: inherit; text-transform: uppercase; letter-spacing: 0.05em; }
+    .sql-copy:hover { color: #60a5fa; border-color: #60a5fa; }
+    .sql-panel pre { margin: 0; padding: 12px 14px; overflow-x: auto; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; line-height: 1.5; color: #cbd5e1; white-space: pre; }
   </style>
 </head>
 <body>
+
+{% macro sql_panel(key, domid=none) -%}
+{% set did = domid or key -%}
+  <div class="sql-block">
+    <button class="sql-toggle" id="sqlbtn-{{ did }}" onclick="toggleSql('{{ did }}')">▸ SQL</button>
+    <div class="sql-panel" id="sql-{{ did }}" style="display:none">
+      <button class="sql-copy" onclick="copySql('{{ did }}')">Copy</button>
+      <pre id="sqlcode-{{ did }}">{{ sql[key]|e }}</pre>
+    </div>
+  </div>
+{%- endmacro %}
 
 <header>
   <h1>📊 Data Interoperability KPIs</h1>
@@ -101,6 +119,7 @@
   <div class="section">
     <h3>Adoption Trend (12 months)</h3>
     <div id="chart-overview-sparkline" class="chart-container"></div>
+    {{ sql_panel('adoption_trend', 'adoption_overview') }}
   </div>
 </div>
 
@@ -110,10 +129,12 @@
     <div class="section">
       <h3>Monthly Adoption Trend</h3>
       <div id="chart-adoption-trend" class="chart-container tall"></div>
+      {{ sql_panel('adoption_trend') }}
     </div>
     <div class="section">
       <h3>All-Time Population</h3>
       <div id="chart-population-donut" class="chart-container tall"></div>
+      {{ sql_panel('population_donut') }}
     </div>
   </div>
   <div class="section">
@@ -142,10 +163,12 @@
   <div class="section">
     <h3>Connector Executions by Month (Prod / Dev / Nonprod)</h3>
     <div id="chart-executions-bar" class="chart-container tall"></div>
+    {{ sql_panel('executions_bar') }}
   </div>
   <div class="section">
     <h3>AO Usage Trend — Last Week Value</h3>
     <div id="chart-ao-usage-line" class="chart-container"></div>
+    {{ sql_panel('ao_usage_line') }}
   </div>
 </div>
 
@@ -155,10 +178,12 @@
     <div class="section">
       <h3>By Product Family</h3>
       <div id="chart-product-family-bar" class="chart-container tall"></div>
+      {{ sql_panel('product_family_bar') }}
     </div>
     <div class="section">
       <h3>By Architecture Type</h3>
       <div id="chart-arch-type-bar" class="chart-container tall"></div>
+      {{ sql_panel('arch_type_bar') }}
     </div>
   </div>
   <div class="section">
@@ -173,6 +198,7 @@
   <div class="section">
     <h3>Adoption by Deployment Option (ODC agents)</h3>
     <div id="chart-deployment-option" class="chart-container"></div>
+    {{ sql_panel('deployment_option_bar') }}
   </div>
 </div>
 
@@ -213,8 +239,8 @@
     </div>
   </div>
   <div class="chart-row">
-    <div class="section"><h3>Connector Usage Trend (12 mo.)</h3><div id="chart-df-trend" class="chart-container tall"></div></div>
-    <div class="section"><h3>By Provider (last full mo.)</h3><div id="chart-df-providers" class="chart-container tall"></div></div>
+    <div class="section"><h3>Connector Usage Trend (12 mo.)</h3><div id="chart-df-trend" class="chart-container tall"></div>{{ sql_panel('data_fabric_trend') }}</div>
+    <div class="section"><h3>By Provider (last full mo.)</h3><div id="chart-df-providers" class="chart-container tall"></div>{{ sql_panel('data_fabric_providers') }}</div>
   </div>
 </div>
 
@@ -253,12 +279,12 @@
 
 <div id="tab-datainterop" class="tab-content">
   <div class="chart-row">
-    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Development</h3><div id="chart-interop-dev" class="chart-container tall"></div></div>
-    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Production</h3><div id="chart-interop-prod" class="chart-container tall"></div></div>
+    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Development</h3><div id="chart-interop-dev" class="chart-container tall"></div>{{ sql_panel('interop_dev') }}</div>
+    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Production</h3><div id="chart-interop-prod" class="chart-container tall"></div>{{ sql_panel('interop_prod') }}</div>
   </div>
   <div class="chart-row">
-    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Development</h3><div id="chart-interop-apps-dev" class="chart-container tall"></div></div>
-    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div></div>
+    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Development</h3><div id="chart-interop-apps-dev" class="chart-container tall"></div>{{ sql_panel('interop_apps_dev') }}</div>
+    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div>{{ sql_panel('interop_apps_prod') }}</div>
   </div>
 </div>
 
@@ -295,6 +321,19 @@
   Plotly.newPlot('chart-interop-prod',  charts.interop_prod.data,  charts.interop_prod.layout,  cfg);
   Plotly.newPlot('chart-interop-apps-dev',  charts.interop_apps_dev.data,  charts.interop_apps_dev.layout,  cfg);
   Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
+
+  function toggleSql(key) {
+    var panel = document.getElementById('sql-' + key);
+    var btn = document.getElementById('sqlbtn-' + key);
+    var open = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    btn.textContent = (open ? '▾' : '▸') + ' SQL';
+  }
+
+  function copySql(key) {
+    var code = document.getElementById('sqlcode-' + key).textContent;
+    navigator.clipboard.writeText(code);
+  }
 
   function switchTab(name) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });

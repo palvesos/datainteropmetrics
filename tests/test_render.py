@@ -274,6 +274,49 @@ def test_compute_metrics_interop_apps_dev_chart(sample_data):
     assert chart["data"][1]["y"] == [62, 94, 112, 125]
 
 
+# --- SQL panels ---
+
+def test_sql_map_has_entry_per_chart(sample_data):
+    metrics = compute_metrics(sample_data)
+    # every chart has a matching SQL entry
+    assert set(metrics["sql"].keys()) == set(metrics["charts"].keys())
+    # entries carry real SQL text
+    assert "SELECT" in metrics["sql"]["interop_dev"].upper()
+    assert "DEV_CUSTOMERS" in metrics["sql"]["interop_dev"]
+
+
+def test_sql_map_multi_query_chart_includes_both(sample_data):
+    metrics = compute_metrics(sample_data)
+    trend = metrics["sql"]["data_fabric_trend"]
+    assert "-- q7_data_fabric_monthly.sql" in trend
+    assert "-- q12_data_fabric_trialing_monthly.sql" in trend
+
+
+def test_sql_map_missing_file_degrades(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data, query_dir=str(tmp_path))
+    assert "not found" in metrics["sql"]["adoption_trend"]
+
+
+def test_render_has_sql_panels(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    # toggle + panel + copy button present for a sample of charts
+    for key in ("adoption_trend", "interop_apps_prod", "data_fabric_trend"):
+        assert f"toggleSql('{key}')" in content
+        assert f'id="sqlcode-{key}"' in content
+        assert f"copySql('{key}')" in content
+    # SQL text is HTML-escaped in the <pre> (e.g. metric_value > 0 -> &gt;)
+    assert "&gt;" in content
+    # the reused adoption_trend chart gets a distinct DOM id on the Overview tab
+    # (no duplicate element ids)
+    assert 'id="sqlcode-adoption_overview"' in content
+    import re
+    ids = re.findall(r'id="(sql-[^"]+|sqlcode-[^"]+|sqlbtn-[^"]+)"', content)
+    assert len(ids) == len(set(ids)), "duplicate SQL panel element ids"
+
+
 def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):
     metrics = compute_metrics(sample_data, _today=pd.Timestamp("2026-06-15"))
     output = str(tmp_path / "report.html")

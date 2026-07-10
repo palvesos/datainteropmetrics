@@ -297,7 +297,45 @@ def _chart_arch_type_bar(df: pd.DataFrame) -> dict:
     }
 
 
-def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
+# Maps each chart to the query file(s) that build it (order = display order).
+CHART_SQL = {
+    "adoption_trend": ["q1_adoption_trend"],
+    "population_donut": ["q6_population"],
+    "executions_bar": ["q4_executions"],
+    "ao_usage_line": ["q5_ao_usage"],
+    "product_family_bar": ["q2_by_product_family"],
+    "arch_type_bar": ["q3_by_arch_type"],
+    "data_fabric_trend": ["q7_data_fabric_monthly", "q12_data_fabric_trialing_monthly"],
+    "data_fabric_providers": ["q8_data_fabric_providers"],
+    "deployment_option_bar": ["q9_deployment_option"],
+    "interop_dev": ["q13_data_interop_customers"],
+    "interop_prod": ["q13_data_interop_customers"],
+    "interop_apps_dev": ["q14_data_interop_app_usage"],
+    "interop_apps_prod": ["q14_data_interop_app_usage"],
+}
+
+
+def _build_sql_map(query_dir: str = "queries") -> dict:
+    """Return {chart_key: sql_text} by reading the source .sql files. Multi-query
+    charts concatenate their queries, each prefixed with a `-- filename.sql` header."""
+    out = {}
+    for chart, files in CHART_SQL.items():
+        parts = []
+        for fn in files:
+            path = os.path.join(query_dir, fn + ".sql")
+            try:
+                with open(path, encoding="utf-8") as f:
+                    text = f.read().strip()
+            except FileNotFoundError:
+                text = f"-- {fn}.sql not found"
+            if len(files) > 1:
+                text = f"-- {fn}.sql\n{text}"
+            parts.append(text)
+        out[chart] = "\n\n".join(parts)
+    return out
+
+
+def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: str = "queries") -> dict:
     q1 = data["q1"].sort_values("MONTH_START", ascending=False).reset_index(drop=True)
     q4 = data["q4"].sort_values("MONTH", ascending=False).reset_index(drop=True)
     q5 = data["q5"].sort_values("REPORT_MONTH", ascending=False).reset_index(drop=True)
@@ -448,6 +486,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "sku_gap_targeting": sku_gap_targeting,
             "infra_no_telemetry": infra_no_telemetry,
         },
+        "sql": _build_sql_map(query_dir),
     }
 
 
