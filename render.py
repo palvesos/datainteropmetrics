@@ -620,9 +620,9 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
             "connector_changes_by_region": _build_region_variants(data["q16"]),
             "changes_per_customer_median": _chart_changes_per_customer(
-                data["q17"], "MEDIAN_CHANGES_PER_CUSTOMER", "Median changes / customer (12 mo.)"),
+                data["q17"], "MEDIAN_CHANGES_PER_CUSTOMER", "Median add/removes / customer (12 mo.)"),
             "changes_per_customer_avg": _chart_changes_per_customer(
-                data["q17"], "AVG_CHANGES_PER_CUSTOMER", "Avg changes / customer (12 mo.)"),
+                data["q17"], "AVG_CHANGES_PER_CUSTOMER", "Avg add/removes / customer (12 mo.)"),
         },
         "tables": {
             "adoption_trend": table_rows,
