@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_thirteen_keys(tmp_path, sample_data):
+def test_load_data_returns_fourteen_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -23,6 +23,7 @@ def test_load_data_returns_thirteen_keys(tmp_path, sample_data):
         "q11": "q11_infra_no_telemetry.parquet",
         "q12": "q12_data_fabric_trialing_monthly.parquet",
         "q13": "q13_data_interop_customers.parquet",
+        "q14": "q14_data_interop_app_usage.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -80,6 +81,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "product_family_bar", "arch_type_bar",
         "data_fabric_trend", "data_fabric_providers", "deployment_option_bar",
         "interop_dev", "interop_prod",
+        "interop_apps_dev", "interop_apps_prod",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -248,8 +250,28 @@ def test_render_has_interop_charts(sample_data, tmp_path):
     output = str(tmp_path / "report.html")
     render(metrics, output_path=output)
     content = open(output).read()
-    for cid in ("chart-interop-dev", "chart-interop-prod"):
+    for cid in ("chart-interop-dev", "chart-interop-prod",
+                "chart-interop-apps-dev", "chart-interop-apps-prod"):
         assert f"'{cid}'" in content and f'id="{cid}"' in content
+
+
+def test_compute_metrics_interop_apps_prod_chart(sample_data):
+    metrics = compute_metrics(sample_data)
+    chart = metrics["charts"]["interop_apps_prod"]
+    cust_bar, apps_bar, line = chart["data"][0], chart["data"][1], chart["data"][2]
+    # months ascending -> Mar, Apr, May, Jun
+    assert cust_bar["type"] == "bar" and apps_bar["type"] == "bar"
+    assert cust_bar["y"] == [23, 27, 34, 36]
+    assert apps_bar["y"] == [23, 28, 36, 38]
+    # % line uses customers / monthly O11+ODC base
+    assert line["y"][-1] == pytest.approx(round(36 / 785 * 100, 1))
+
+
+def test_compute_metrics_interop_apps_dev_chart(sample_data):
+    metrics = compute_metrics(sample_data)
+    chart = metrics["charts"]["interop_apps_dev"]
+    assert chart["data"][0]["y"] == [57, 83, 94, 109]
+    assert chart["data"][1]["y"] == [62, 94, 112, 125]
 
 
 def test_render_shows_df_kpi_and_sku_gap(sample_data, tmp_path):

@@ -256,6 +256,10 @@
     <div class="section"><h3>Customers with Data Fabric Connections for O11 — Development</h3><div id="chart-interop-dev" class="chart-container tall"></div></div>
     <div class="section"><h3>Customers with Data Fabric Connections for O11 — Production</h3><div id="chart-interop-prod" class="chart-container tall"></div></div>
   </div>
+  <div class="chart-row">
+    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Development</h3><div id="chart-interop-apps-dev" class="chart-container tall"></div></div>
+    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div></div>
+  </div>
 </div>
 
 <script>
@@ -270,7 +274,9 @@
     data_fabric_providers: {{ charts.data_fabric_providers | tojson }},
     deployment_option_bar: {{ charts.deployment_option_bar | tojson }},
     interop_dev:  {{ charts.interop_dev | tojson }},
-    interop_prod: {{ charts.interop_prod | tojson }}
+    interop_prod: {{ charts.interop_prod | tojson }},
+    interop_apps_dev:  {{ charts.interop_apps_dev | tojson }},
+    interop_apps_prod: {{ charts.interop_apps_prod | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -287,6 +293,8 @@
   Plotly.newPlot('chart-deployment-option',  charts.deployment_option_bar.data, charts.deployment_option_bar.layout, cfg);
   Plotly.newPlot('chart-interop-dev',   charts.interop_dev.data,   charts.interop_dev.layout,   cfg);
   Plotly.newPlot('chart-interop-prod',  charts.interop_prod.data,  charts.interop_prod.layout,  cfg);
+  Plotly.newPlot('chart-interop-apps-dev',  charts.interop_apps_dev.data,  charts.interop_apps_dev.layout,  cfg);
+  Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
 
   function switchTab(name) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });

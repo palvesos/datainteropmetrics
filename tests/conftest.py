@@ -95,5 +95,14 @@ def sample_data():
         "PROD_CUSTOMERS": [119, 97, 78, 63],
         "O11_ODC_CUSTOMERS": [785, 756, 739, 714],
     })
+    q14 = pd.DataFrame({
+        "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
+        "DEV_CUSTOMERS": [109, 94, 83, 57],
+        "PROD_CUSTOMERS": [36, 34, 27, 23],
+        "DEV_APPS": [125, 112, 94, 62],
+        "PROD_APPS": [38, 36, 28, 23],
+        "O11_ODC_CUSTOMERS": [785, 756, 739, 714],
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
-            "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12, "q13": q13}
+            "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
+            "q13": q13, "q14": q14}
