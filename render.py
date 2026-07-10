@@ -279,21 +279,24 @@ def _chart_connector_changes_dow(df: pd.DataFrame) -> dict:
 
 def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict:
     """Horizontal stacked bar of connector change events by cloud region (top-N + Other),
-    split add/remove vs reconfigure. ga+ea rings only."""
-    df = df.copy()
-    df["total"] = df["ADD_REMOVE_EVENTS"] + df["RECONFIGURE_EVENTS"]
-    df = df.sort_values("total", ascending=False)
-    top = df.head(top_n)
-    rest = df.iloc[top_n:]
-    regions = top["REGION"].tolist()
-    ar = [int(v) for v in top["ADD_REMOVE_EVENTS"]]
-    rc = [int(v) for v in top["RECONFIGURE_EVENTS"]]
-    if len(rest):
-        regions.append("Other")
-        ar.append(int(rest["ADD_REMOVE_EVENTS"].sum()))
-        rc.append(int(rest["RECONFIGURE_EVENTS"].sum()))
-    # reverse so the largest region sits at the top and "Other" at the bottom
-    regions, ar, rc = regions[::-1], ar[::-1], rc[::-1]
+    split add/remove vs reconfigure. Accepts any (month/ring) subset of q16."""
+    regions: list = []
+    ar: list = []
+    rc: list = []
+    if len(df):
+        g = df.groupby("REGION", as_index=False)[["ADD_REMOVE_EVENTS", "RECONFIGURE_EVENTS"]].sum()
+        g["total"] = g["ADD_REMOVE_EVENTS"] + g["RECONFIGURE_EVENTS"]
+        g = g.sort_values("total", ascending=False)
+        top, rest = g.head(top_n), g.iloc[top_n:]
+        regions = top["REGION"].tolist()
+        ar = [int(v) for v in top["ADD_REMOVE_EVENTS"]]
+        rc = [int(v) for v in top["RECONFIGURE_EVENTS"]]
+        if len(rest):
+            regions.append("Other")
+            ar.append(int(rest["ADD_REMOVE_EVENTS"].sum()))
+            rc.append(int(rest["RECONFIGURE_EVENTS"].sum()))
+        # reverse so the largest region sits at the top and "Other" at the bottom
+        regions, ar, rc = regions[::-1], ar[::-1], rc[::-1]
     return {
         "data": [
             {"y": regions, "x": ar, "type": "bar", "orientation": "h",
@@ -304,11 +307,25 @@ def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict
         "layout": {
             "barmode": "stack",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
-            "xaxis": {"title": "Change events (12 mo.)", "gridcolor": "#334155"},
+            "xaxis": {"title": "Change events", "gridcolor": "#334155"},
             "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.08},
             "margin": {"t": 20, "b": 50, "l": 160, "r": 20}, "autosize": True,
         },
     }
+
+
+def _build_region_variants(df: pd.DataFrame, top_n: int = 6) -> dict:
+    """Precompute the by-region bar for every month x ring selection, so the dashboard's
+    dropdowns just swap a variant. Keys are '<month|all>|<ring|all>'."""
+    df = df.copy()
+    months = sorted(df["MONTH"].dt.strftime("%Y-%m").unique().tolist())
+    variants = {}
+    for ring in ("all", "ga", "ea"):
+        dfr = df if ring == "all" else df[df["RING"] == ring]
+        for month in ["all"] + months:
+            dfm = dfr if month == "all" else dfr[dfr["MONTH"].dt.strftime("%Y-%m") == month]
+            variants[f"{month}|{ring}"] = _chart_connector_changes_by_region(dfm, top_n)
+    return {"variants": variants, "months": months, "default": "all|all"}
 
 
 def _chart_deployment_option_bar(df: pd.DataFrame) -> dict:
@@ -566,7 +583,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "interop_apps_prod": _chart_interop_app_usage(data["q14"], "PROD_CUSTOMERS", "PROD_APPS"),
             "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
-            "connector_changes_by_region": _chart_connector_changes_by_region(data["q16"]),
+            "connector_changes_by_region": _build_region_variants(data["q16"]),
         },
         "tables": {
             "adoption_trend": table_rows,

@@ -59,7 +59,7 @@ Per-query values:
 | q13 | `queries/q13_data_interop_customers.sql` | `data/q13_data_interop_customers.parquet` | `'MONTH'` | — | `'DEV_CUSTOMERS'`, `'PROD_CUSTOMERS'`, `'O11_ODC_CUSTOMERS'` |
 | q14 | `queries/q14_data_interop_app_usage.sql` | `data/q14_data_interop_app_usage.parquet` | `'MONTH'` | — | `'DEV_CUSTOMERS'`, `'PROD_CUSTOMERS'`, `'DEV_APPS'`, `'PROD_APPS'`, `'O11_ODC_CUSTOMERS'` |
 | q15 | `queries/q15_connector_change_frequency.sql` | `data/q15_connector_change_frequency.parquet` | `'DAY'` | — | `'ADD_REMOVE_EVENTS'`, `'RECONFIGURE_EVENTS'` |
-| q16 | `queries/q16_connector_changes_by_region.sql` | `data/q16_connector_changes_by_region.parquet` | — | — | `'ADD_REMOVE_EVENTS'`, `'RECONFIGURE_EVENTS'` |
+| q16 | `queries/q16_connector_changes_by_region.sql` | `data/q16_connector_changes_by_region.parquet` | `'MONTH'` | — | `'ADD_REMOVE_EVENTS'`, `'RECONFIGURE_EVENTS'` |
 
 For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 

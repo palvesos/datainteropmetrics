@@ -110,10 +110,15 @@ def sample_data():
         "RECONFIGURE_EVENTS": [5, 1, 0, 3, 4],
     })
     q16 = pd.DataFrame({
+        "MONTH": pd.to_datetime([
+            "2026-06-01", "2026-06-01", "2026-06-01", "2026-06-01", "2026-06-01",
+            "2026-06-01", "2026-06-01", "2026-06-01", "2026-05-01", "2026-05-01"]),
+        "RING": ["ga", "ga", "ga", "ea", "ga", "ea", "ga", "ea", "ga", "ea"],
         "REGION": ["EU (Frankfurt)", "US East (N. Virginia)", "EU (Ireland)",
-                   "AP (Singapore)", "EU (London)", "Canada (Central)", "AP (Tokyo)", "AP (Mumbai)"],
-        "ADD_REMOVE_EVENTS": [49, 22, 10, 10, 16, 16, 0, 2],
-        "RECONFIGURE_EVENTS": [104, 49, 26, 26, 13, 4, 3, 0],
+                   "AP (Singapore)", "EU (London)", "Canada (Central)", "AP (Tokyo)",
+                   "AP (Mumbai)", "EU (Frankfurt)", "US East (N. Virginia)"],
+        "ADD_REMOVE_EVENTS": [40, 22, 10, 8, 16, 16, 0, 2, 9, 5],
+        "RECONFIGURE_EVENTS": [90, 49, 26, 25, 13, 4, 3, 0, 14, 8],
     })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,

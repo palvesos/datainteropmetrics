@@ -93,6 +93,10 @@ def test_compute_metrics_has_all_charts(sample_data):
 def test_compute_metrics_chart_has_data_and_layout(sample_data):
     metrics = compute_metrics(sample_data)
     for name, chart in metrics["charts"].items():
+        if "variants" in chart:  # dropdown-driven chart: each variant holds data/layout
+            for key, v in chart["variants"].items():
+                assert "data" in v and "layout" in v, f"{name}[{key}] missing data/layout"
+            continue
         assert "data" in chart, f"{name} missing 'data'"
         assert "layout" in chart, f"{name} missing 'layout'"
         assert len(chart["data"]) > 0, f"{name} has empty data"
@@ -300,19 +304,38 @@ def test_compute_metrics_connector_changes_dow(sample_data):
     assert rc["y"][1] == 12
 
 
-def test_compute_metrics_connector_changes_by_region(sample_data):
-    chart = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
+def test_compute_metrics_region_variants_shape(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
+    assert obj["default"] == "all|all"
+    assert obj["months"] == ["2026-05", "2026-06"]
+    # a variant exists for every month x ring combination (+ the "all" options)
+    for ring in ("all", "ga", "ea"):
+        for month in ("all", "2026-05", "2026-06"):
+            assert f"{month}|{ring}" in obj["variants"]
+
+
+def test_region_variant_all_all_aggregates_and_rolls_up_other(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
+    chart = obj["variants"]["all|all"]
     ar, rc = chart["data"][0], chart["data"][1]
-    assert chart["layout"]["barmode"] == "stack"
-    assert ar["orientation"] == "h"
-    # 8 regions -> top 6 + Other; y reversed so largest (Frankfurt) is last (top)
+    assert chart["layout"]["barmode"] == "stack" and ar["orientation"] == "h"
+    # y reversed so largest (Frankfurt: 40+9 / 90+14) is last (top), "Other" first (bottom)
     assert ar["y"][-1] == "EU (Frankfurt)"
-    assert ar["y"][0] == "Other"
-    # Other = the 2 smallest by total: AP (Tokyo) 0+3 and AP (Mumbai) 2+0
-    assert ar["x"][0] == 2  # add/remove for Other = 0 + 2
-    assert rc["x"][0] == 3  # reconfigure for Other = 3 + 0
-    # Frankfurt stacked values intact
     assert ar["x"][-1] == 49 and rc["x"][-1] == 104
+    # 8 regions -> top 6 + Other (2 smallest: AP Tokyo 0/3, AP Mumbai 2/0)
+    assert ar["y"][0] == "Other"
+    assert ar["x"][0] == 2 and rc["x"][0] == 3
+
+
+def test_region_variant_month_ring_filter(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
+    # June + ga only: 5 ga regions in June, no Other; ea rows excluded
+    chart = obj["variants"]["2026-06|ga"]
+    regions = chart["data"][0]["y"]
+    assert "Other" not in regions
+    assert "AP (Singapore)" not in regions  # that row is ea
+    assert chart["data"][0]["y"][-1] == "EU (Frankfurt)"
+    assert chart["data"][0]["x"][-1] == 40 and chart["data"][1]["x"][-1] == 90
 
 
 # --- SQL panels ---
