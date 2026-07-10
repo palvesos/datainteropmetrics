@@ -22,6 +22,7 @@ def load_data(data_dir: str = "data") -> dict:
         "q12": "q12_data_fabric_trialing_monthly.parquet",
         "q13": "q13_data_interop_customers.parquet",
         "q14": "q14_data_interop_app_usage.parquet",
+        "q15": "q15_connector_change_frequency.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -230,6 +231,51 @@ def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str) -> 
     }
 
 
+def _chart_connector_changes_monthly(df: pd.DataFrame) -> dict:
+    """Stacked bar of connector change events per month (add/remove + reconfigure)."""
+    df = df.sort_values("DAY")
+    g = df.groupby(df["DAY"].dt.strftime("%Y-%m"))[["ADD_REMOVE_EVENTS", "RECONFIGURE_EVENTS"]].sum()
+    months = g.index.tolist()
+    return {
+        "data": [
+            {"x": months, "y": [int(v) for v in g["ADD_REMOVE_EVENTS"]], "type": "bar",
+             "name": "Add / Remove", "marker": {"color": "#60a5fa"}},
+            {"x": months, "y": [int(v) for v in g["RECONFIGURE_EVENTS"]], "type": "bar",
+             "name": "Reconfigure", "marker": {"color": "#f59e0b"}},
+        ],
+        "layout": {
+            "barmode": "stack",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"gridcolor": "#334155"},
+            "yaxis": {"title": "Change events", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 50, "l": 60, "r": 20}, "autosize": True,
+        },
+    }
+
+
+def _chart_connector_changes_dow(df: pd.DataFrame) -> dict:
+    """Stacked bar of connector change events by day of week (Mon-Sun)."""
+    names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    dow = df["DAY"].dt.dayofweek
+    ar = [int(df.loc[dow == i, "ADD_REMOVE_EVENTS"].sum()) for i in range(7)]
+    rc = [int(df.loc[dow == i, "RECONFIGURE_EVENTS"].sum()) for i in range(7)]
+    return {
+        "data": [
+            {"x": names, "y": ar, "type": "bar", "name": "Add / Remove", "marker": {"color": "#60a5fa"}},
+            {"x": names, "y": rc, "type": "bar", "name": "Reconfigure", "marker": {"color": "#f59e0b"}},
+        ],
+        "layout": {
+            "barmode": "stack",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"gridcolor": "#334155"},
+            "yaxis": {"title": "Change events (12 mo.)", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 50, "l": 60, "r": 20}, "autosize": True,
+        },
+    }
+
+
 def _chart_deployment_option_bar(df: pd.DataFrame) -> dict:
     df = df.sort_values("USAGE_DEPLOYMENT_OPTION")
     opts = df["USAGE_DEPLOYMENT_OPTION"].tolist()
@@ -312,6 +358,8 @@ CHART_SQL = {
     "interop_prod": ["q13_data_interop_customers"],
     "interop_apps_dev": ["q14_data_interop_app_usage"],
     "interop_apps_prod": ["q14_data_interop_app_usage"],
+    "connector_changes_monthly": ["q15_connector_change_frequency"],
+    "connector_changes_dow": ["q15_connector_change_frequency"],
 }
 
 
@@ -480,6 +528,8 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "interop_prod": _chart_interop_customers(data["q13"], "PROD_CUSTOMERS", "#64748b"),
             "interop_apps_dev": _chart_interop_app_usage(data["q14"], "DEV_CUSTOMERS", "DEV_APPS"),
             "interop_apps_prod": _chart_interop_app_usage(data["q14"], "PROD_CUSTOMERS", "PROD_APPS"),
+            "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
+            "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
         },
         "tables": {
             "adoption_trend": table_rows,

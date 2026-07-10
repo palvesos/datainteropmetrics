@@ -103,6 +103,12 @@ def sample_data():
         "PROD_APPS": [38, 36, 28, 23],
         "O11_ODC_CUSTOMERS": [785, 756, 739, 714],
     })
+    q15 = pd.DataFrame({
+        "DAY": pd.to_datetime([
+            "2026-06-02", "2026-06-03", "2026-06-06", "2026-05-05", "2026-05-12"]),  # Tue, Wed, Sat, Tue, Tue
+        "ADD_REMOVE_EVENTS": [3, 2, 1, 4, 2],
+        "RECONFIGURE_EVENTS": [5, 1, 0, 3, 4],
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
-            "q13": q13, "q14": q14}
+            "q13": q13, "q14": q14, "q15": q15}
