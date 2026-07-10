@@ -318,12 +318,12 @@ def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict
 
 
 def _chart_changes_per_customer(df: pd.DataFrame, value_col: str, x_title: str, top_n: int = 8) -> dict:
-    """Horizontal grouped bar of avg/median changes per customer by region, one bar per ring.
-    Regions ranked by total customers (no 'Other' rollup — you can't average medians).
-    n_customers shown in hover so thin cells are visible."""
+    """Horizontal grouped bar of avg/median changes per tenant by region, one bar per ring.
+    Regions ranked by total tenants (no 'Other' rollup — you can't average medians).
+    n_tenants shown in hover so thin cells are visible."""
     data = []
     if len(df):
-        order = (df.groupby("REGION")["N_CUSTOMERS"].sum()
+        order = (df.groupby("REGION")["N_TENANTS"].sum()
                    .sort_values(ascending=False).head(top_n).index.tolist())
         y = order[::-1]  # largest region at top
         for ring in ("ga", "ea"):
@@ -331,7 +331,7 @@ def _chart_changes_per_customer(df: pd.DataFrame, value_col: str, x_title: str, 
             if sub.empty:
                 continue
             vals = [float(sub.loc[r, value_col]) if r in sub.index else 0 for r in y]
-            ns = [int(sub.loc[r, "N_CUSTOMERS"]) if r in sub.index else 0 for r in y]
+            ns = [int(sub.loc[r, "N_TENANTS"]) if r in sub.index else 0 for r in y]
             data.append({
                 "y": y, "x": vals, "type": "bar", "orientation": "h", "name": ring,
                 "marker": {"color": _RING_COLORS[ring]}, "customdata": ns,
@@ -620,9 +620,9 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
             "connector_changes_by_region": _build_region_variants(data["q16"]),
             "changes_per_customer_median": _chart_changes_per_customer(
-                data["q17"], "MEDIAN_CHANGES_PER_CUSTOMER", "Median add/removes / customer (12 mo.)"),
+                data["q17"], "MEDIAN_CHANGES_PER_TENANT", "Median add/removes / tenant (12 mo.)"),
             "changes_per_customer_avg": _chart_changes_per_customer(
-                data["q17"], "AVG_CHANGES_PER_CUSTOMER", "Avg add/removes / customer (12 mo.)"),
+                data["q17"], "AVG_CHANGES_PER_TENANT", "Avg add/removes / tenant (12 mo.)"),
         },
         "tables": {
             "adoption_trend": table_rows,

@@ -340,7 +340,7 @@ def test_region_variant_month_filter(sample_data):
     assert ga["x"][-1] == 130
 
 
-def test_changes_per_customer_charts(sample_data):
+def test_changes_per_tenant_charts(sample_data):
     charts = compute_metrics(sample_data)["charts"]
     med = charts["changes_per_customer_median"]
     avg = charts["changes_per_customer_avg"]
@@ -348,11 +348,11 @@ def test_changes_per_customer_charts(sample_data):
     assert [t["name"] for t in med["data"]] == ["ga", "ea"]
     ga_med, ea_med = med["data"][0], med["data"][1]
     assert ga_med["orientation"] == "h"
-    # regions ranked by total customers; Frankfurt (36+1) is largest -> top (last)
+    # regions ranked by total tenants; Frankfurt (36+1) is largest -> top (last)
     assert ga_med["y"][-1] == "EU (Frankfurt)"
     assert ga_med["x"][-1] == 2.0            # Frankfurt ga median
     assert ea_med["x"][-1] == 22.0           # Frankfurt ea median (n=1)
-    # n_customers carried for hover context
+    # n_tenants carried for hover context
     assert ga_med["customdata"][-1] == 36
     # avg chart uses the avg column
     assert avg["data"][0]["x"][-1] == 3.64

@@ -124,9 +124,9 @@ def sample_data():
         "REGION": ["EU (Frankfurt)", "US East (N. Virginia)", "EU (Ireland)",
                    "EU (Frankfurt)", "US East (N. Virginia)", "AP (Sydney)"],
         "RING": ["ga", "ga", "ga", "ea", "ea", "ga"],
-        "AVG_CHANGES_PER_CUSTOMER": [3.64, 3.25, 3.27, 22.0, 6.0, 1.33],
-        "MEDIAN_CHANGES_PER_CUSTOMER": [2.0, 2.0, 2.0, 22.0, 6.0, 1.0],
-        "N_CUSTOMERS": [36, 20, 11, 1, 1, 6],
+        "AVG_CHANGES_PER_TENANT": [3.64, 3.25, 3.27, 22.0, 6.0, 1.33],
+        "MEDIAN_CHANGES_PER_TENANT": [2.0, 2.0, 2.0, 22.0, 6.0, 1.0],
+        "N_TENANTS": [36, 20, 11, 1, 1, 6],
         "TOTAL_CHANGES": [131, 65, 36, 22, 6, 8],
     })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,

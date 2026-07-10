@@ -1,9 +1,9 @@
--- Data InterOperability: number of connector ADD/REMOVE changes per customer, by cloud region x
+-- Data InterOperability: number of connector ADD/REMOVE changes per TENANT, by cloud region x
 -- ring (ga/ea), last 12 months. A "change" here is ONLY an addition or deletion of a connector
--- (net change in the EXTERNALCONNECTIONCOUNT daily count gauge) -- reconfigurations of an existing
--- connector are NOT counted. Events counted per (customer, region, ring), then aggregated to AVG
--- and MEDIAN across customers within each region x ring cell. N_CUSTOMERS/TOTAL_CHANGES give
--- context (many ea cells have very few customers -> noisy). ga+ea rings only; NULL region -> 'Unknown'.
+-- (net change in the EXTERNALCONNECTIONCOUNT daily count gauge) -- reconfigurations are NOT counted.
+-- Events counted per (tenant, region, ring), then aggregated to AVG and MEDIAN across tenants
+-- within each region x ring cell. N_TENANTS/TOTAL_CHANGES give context (many ea cells have very
+-- few tenants -> noisy). ga+ea rings only; NULL region -> 'Unknown'.
 -- Daily-snapshot caveats: 1-day resolution; same-day add+remove nets to zero and is missed;
 -- 12-month window censoring.
 WITH env_dim AS (
@@ -16,14 +16,14 @@ ring_tenants AS (
   WHERE odc_ring IN ('ga','ea') GROUP BY 1
 ),
 infra_dim AS (
-  SELECT tenant_id, MAX(activation_code) AS activation_code, MAX(company_sfdc_id) AS company
+  SELECT tenant_id, MAX(activation_code) AS activation_code
   FROM CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE
   WHERE is_current AND is_active AND infrastructure_type_label='Enterprise Phoenix' GROUP BY 1
 ),
 cnt_daily AS (
   SELECT ext.tenant, ext.environment_id, ext.event_provider,
          TRY_TO_TIMESTAMP(ext.event_sent)::date AS d, ext.metric_value AS mv,
-         ed.region, rt.ring, i.company
+         ed.region, rt.ring
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT ext
   JOIN ring_tenants rt ON rt.tenant_id = ext.tenant
   JOIN infra_dim i ON i.tenant_id = ext.tenant
@@ -34,15 +34,15 @@ cnt_daily AS (
     TRY_TO_TIMESTAMP(ext.event_sent)::date ORDER BY TRY_TO_TIMESTAMP(ext.event_sent) DESC)=1
 ),
 add_remove AS (
-  SELECT company, COALESCE(region,'Unknown') AS region, ring, COUNT(*) AS changes FROM (
-    SELECT company, region, ring, mv - LAG(mv) OVER (PARTITION BY tenant, environment_id, event_provider ORDER BY d) delta
+  SELECT tenant, COALESCE(region,'Unknown') AS region, ring, COUNT(*) AS changes FROM (
+    SELECT tenant, region, ring, mv - LAG(mv) OVER (PARTITION BY tenant, environment_id, event_provider ORDER BY d) delta
     FROM cnt_daily
   ) WHERE delta IS NOT NULL AND delta<>0 GROUP BY 1,2,3
 )
 SELECT region AS REGION, ring AS RING,
-       ROUND(AVG(changes),2) AS AVG_CHANGES_PER_CUSTOMER,
-       MEDIAN(changes) AS MEDIAN_CHANGES_PER_CUSTOMER,
-       COUNT(DISTINCT company) AS N_CUSTOMERS,
+       ROUND(AVG(changes),2) AS AVG_CHANGES_PER_TENANT,
+       MEDIAN(changes) AS MEDIAN_CHANGES_PER_TENANT,
+       COUNT(DISTINCT tenant) AS N_TENANTS,
        SUM(changes) AS TOTAL_CHANGES
 FROM add_remove
-GROUP BY 1,2 ORDER BY N_CUSTOMERS DESC;
+GROUP BY 1,2 ORDER BY N_TENANTS DESC;
