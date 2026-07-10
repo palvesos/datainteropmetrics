@@ -362,10 +362,11 @@ def _chart_changes_per_tenant_combo(df: pd.DataFrame, top_n: int = 8) -> dict:
 _WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 
-def _heatmap_region_weekday(df: pd.DataFrame, ring: str, ctype: str, top_n: int = 10) -> dict:
-    """Region x weekday heatmap; cell = avg changes per tenant. `ring` in all/ga/ea, `ctype`
-    in both/add_remove/reconfigure. Denominator = tenants in region x ring (rings are disjoint,
-    so ring='all' sums the per-ring tenant counts)."""
+def _heatmap_region_weekday(df: pd.DataFrame, window: str, ring: str, ctype: str, top_n: int = 10) -> dict:
+    """Region x weekday heatmap; cell = avg changes per tenant. `window` in 1m/3m/6m/all,
+    `ring` in all/ga/ea, `ctype` in both/add_remove/reconfigure. Denominator = tenants in
+    region x ring for that window (rings are disjoint, so ring='all' sums the per-ring counts)."""
+    df = df[df["WINDOW_KEY"] == window]
     sub = df if ring == "all" else df[df["RING"] == ring]
     ev = sub if ctype == "both" else sub[sub["CHANGE_TYPE"] == ctype]
     # tenant denominator per region (one N per region x ring, summed across rings for 'all')
@@ -407,12 +408,13 @@ def _heatmap_region_weekday(df: pd.DataFrame, ring: str, ctype: str, top_n: int 
 
 
 def _build_heatmap_variants(df: pd.DataFrame) -> dict:
-    """Precompute the region x weekday heatmap for every ring x change-type selection."""
+    """Precompute the region x weekday heatmap for every window x ring x change-type selection."""
     variants = {}
-    for ring in ("all", "ga", "ea"):
-        for ctype in ("both", "add_remove", "reconfigure"):
-            variants[f"{ring}|{ctype}"] = _heatmap_region_weekday(df, ring, ctype)
-    return {"variants": variants, "default": "all|both"}
+    for window in ("all", "6m", "3m", "1m"):
+        for ring in ("all", "ga", "ea"):
+            for ctype in ("both", "add_remove", "reconfigure"):
+                variants[f"{window}|{ring}|{ctype}"] = _heatmap_region_weekday(df, window, ring, ctype)
+    return {"variants": variants, "default": "all|all|both"}
 
 
 def _build_region_variants(df: pd.DataFrame, top_n: int = 6) -> dict:

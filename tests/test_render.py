@@ -362,13 +362,14 @@ def test_changes_per_tenant_combo(sample_data):
 
 def test_change_heatmap_variants(sample_data):
     obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
-    assert obj["default"] == "all|both"
-    # 3 rings x 3 change-types
-    assert len(obj["variants"]) == 9
-    for ring in ("all", "ga", "ea"):
-        for ctype in ("both", "add_remove", "reconfigure"):
-            assert f"{ring}|{ctype}" in obj["variants"]
-    hm = obj["variants"]["all|both"]["data"][0]
+    assert obj["default"] == "all|all|both"
+    # 4 windows x 3 rings x 3 change-types
+    assert len(obj["variants"]) == 36
+    for window in ("all", "6m", "3m", "1m"):
+        for ring in ("all", "ga", "ea"):
+            for ctype in ("both", "add_remove", "reconfigure"):
+                assert f"{window}|{ring}|{ctype}" in obj["variants"]
+    hm = obj["variants"]["all|all|both"]["data"][0]
     assert hm["type"] == "heatmap"
     assert hm["x"] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     # regions reversed so largest by tenants (Frankfurt: ga10+ea2=12) is at the top;
@@ -382,13 +383,23 @@ def test_change_heatmap_variants(sample_data):
 
 def test_change_heatmap_type_and_ring_filter(sample_data):
     obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
-    # ga only + reconfigure only: Frankfurt Wed = 20 / 10 (ga tenants) = 2.0; Tue add/remove excluded
-    hm = obj["variants"]["ga|reconfigure"]["data"][0]
-    # ga-only variant labels show just the ga count
+    # all-time, ga only + reconfigure only: Frankfurt Wed = 20 / 10 (ga tenants) = 2.0
+    hm = obj["variants"]["all|ga|reconfigure"]["data"][0]
     assert "EU (Frankfurt)  (ga 10)" in hm["y"]
     fr = hm["y"].index("EU (Frankfurt)  (ga 10)")
     assert hm["z"][fr][2] == 2.0   # Wed reconfigure
     assert hm["z"][fr][1] == 0.0   # Tue (was add/remove) now empty
+
+
+def test_change_heatmap_window_filter(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
+    # last-month, ga, both: Frankfurt Tue add 3 / 8 tenants = 0.375; Wed reconfigure 5 / 8 = 0.625
+    hm = obj["variants"]["1m|ga|both"]["data"][0]
+    fr = [i for i, y in enumerate(hm["y"]) if y.startswith("EU (Frankfurt)")][0]
+    assert hm["z"][fr][1] == round(3 / 8, 3)
+    assert hm["z"][fr][2] == round(5 / 8, 3)
+    # denominator is the 1m tenant count (8), reflected in the label
+    assert "(ga 8)" in hm["y"][fr]
 
 
 # --- SQL panels ---

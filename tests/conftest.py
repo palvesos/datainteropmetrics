@@ -130,14 +130,17 @@ def sample_data():
         "TOTAL_CHANGES": [131, 65, 36, 22, 6, 8],
     })
     q18 = pd.DataFrame({
+        "WINDOW_KEY": ["all", "all", "all", "all", "all", "all", "1m", "1m"],
         "REGION": ["EU (Frankfurt)", "EU (Frankfurt)", "EU (Frankfurt)",
-                   "US East (N. Virginia)", "US East (N. Virginia)", "EU (Ireland)"],
-        "RING": ["ga", "ga", "ea", "ga", "ga", "ga"],
-        "WEEKDAY": [2, 3, 2, 3, 4, 2],  # Tue, Wed, Tue, Wed, Thu, Tue
+                   "US East (N. Virginia)", "US East (N. Virginia)", "EU (Ireland)",
+                   "EU (Frankfurt)", "EU (Frankfurt)"],
+        "RING": ["ga", "ga", "ea", "ga", "ga", "ga", "ga", "ga"],
+        "WEEKDAY": [2, 3, 2, 3, 4, 2, 2, 3],  # Tue, Wed, Tue, Wed, Thu, Tue, Tue, Wed
         "CHANGE_TYPE": ["add_remove", "reconfigure", "add_remove",
-                        "add_remove", "reconfigure", "reconfigure"],
-        "EVENTS": [8, 20, 4, 10, 6, 5],
-        "N_TENANTS": [10, 10, 2, 5, 5, 4],
+                        "add_remove", "reconfigure", "reconfigure",
+                        "add_remove", "reconfigure"],
+        "EVENTS": [8, 20, 4, 10, 6, 5, 3, 5],
+        "N_TENANTS": [10, 10, 2, 5, 5, 4, 8, 8],
     })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
