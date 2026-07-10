@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_sixteen_keys(tmp_path, sample_data):
+def test_load_data_returns_seventeen_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -26,6 +26,7 @@ def test_load_data_returns_sixteen_keys(tmp_path, sample_data):
         "q14": "q14_data_interop_app_usage.parquet",
         "q15": "q15_connector_change_frequency.parquet",
         "q16": "q16_connector_changes_by_region.parquet",
+        "q17": "q17_changes_per_customer_by_region_ring.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -86,6 +87,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "interop_apps_dev", "interop_apps_prod",
         "connector_changes_monthly", "connector_changes_dow",
         "connector_changes_by_region",
+        "changes_per_customer_median", "changes_per_customer_avg",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -336,6 +338,24 @@ def test_region_variant_month_filter(sample_data):
     assert ga["name"] == "ga"
     assert ga["y"][-1] == "EU (Frankfurt)"
     assert ga["x"][-1] == 130
+
+
+def test_changes_per_customer_charts(sample_data):
+    charts = compute_metrics(sample_data)["charts"]
+    med = charts["changes_per_customer_median"]
+    avg = charts["changes_per_customer_avg"]
+    assert med["layout"]["barmode"] == "group"
+    assert [t["name"] for t in med["data"]] == ["ga", "ea"]
+    ga_med, ea_med = med["data"][0], med["data"][1]
+    assert ga_med["orientation"] == "h"
+    # regions ranked by total customers; Frankfurt (36+1) is largest -> top (last)
+    assert ga_med["y"][-1] == "EU (Frankfurt)"
+    assert ga_med["x"][-1] == 2.0            # Frankfurt ga median
+    assert ea_med["x"][-1] == 22.0           # Frankfurt ea median (n=1)
+    # n_customers carried for hover context
+    assert ga_med["customdata"][-1] == 36
+    # avg chart uses the avg column
+    assert avg["data"][0]["x"][-1] == 3.64
 
 
 # --- SQL panels ---

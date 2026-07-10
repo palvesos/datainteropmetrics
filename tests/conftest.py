@@ -120,6 +120,15 @@ def sample_data():
         "ADD_REMOVE_EVENTS": [40, 22, 10, 8, 16, 16, 0, 2, 9, 5],
         "RECONFIGURE_EVENTS": [90, 49, 26, 25, 13, 4, 3, 0, 14, 8],
     })
+    q17 = pd.DataFrame({
+        "REGION": ["EU (Frankfurt)", "US East (N. Virginia)", "EU (Ireland)",
+                   "EU (Frankfurt)", "US East (N. Virginia)", "AP (Sydney)"],
+        "RING": ["ga", "ga", "ga", "ea", "ea", "ga"],
+        "AVG_CHANGES_PER_CUSTOMER": [3.64, 3.25, 3.27, 22.0, 6.0, 1.33],
+        "MEDIAN_CHANGES_PER_CUSTOMER": [2.0, 2.0, 2.0, 22.0, 6.0, 1.0],
+        "N_CUSTOMERS": [36, 20, 11, 1, 1, 6],
+        "TOTAL_CHANGES": [131, 65, 36, 22, 6, 8],
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
-            "q13": q13, "q14": q14, "q15": q15, "q16": q16}
+            "q13": q13, "q14": q14, "q15": q15, "q16": q16, "q17": q17}

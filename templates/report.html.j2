@@ -302,6 +302,10 @@
     <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
     {{ sql_panel('connector_changes_by_region') }}
   </div>
+  <div class="chart-row">
+    <div class="section"><h3>Median Changes per Customer by Region × Ring (12 mo.)</h3><div id="chart-changes-per-customer-median" class="chart-container tall"></div>{{ sql_panel('changes_per_customer_median') }}</div>
+    <div class="section"><h3>Average Changes per Customer by Region × Ring (12 mo.)</h3><div id="chart-changes-per-customer-avg" class="chart-container tall"></div>{{ sql_panel('changes_per_customer_avg') }}</div>
+  </div>
 </div>
 
 <script>
@@ -321,7 +325,9 @@
     interop_apps_prod: {{ charts.interop_apps_prod | tojson }},
     connector_changes_monthly: {{ charts.connector_changes_monthly | tojson }},
     connector_changes_dow:     {{ charts.connector_changes_dow | tojson }},
-    connector_changes_by_region: {{ charts.connector_changes_by_region | tojson }}
+    connector_changes_by_region: {{ charts.connector_changes_by_region | tojson }},
+    changes_per_customer_median: {{ charts.changes_per_customer_median | tojson }},
+    changes_per_customer_avg:    {{ charts.changes_per_customer_avg | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -342,6 +348,9 @@
   Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
   Plotly.newPlot('chart-connector-changes-monthly', charts.connector_changes_monthly.data, charts.connector_changes_monthly.layout, cfg);
   Plotly.newPlot('chart-connector-changes-dow',     charts.connector_changes_dow.data,     charts.connector_changes_dow.layout,     cfg);
+  Plotly.newPlot('chart-changes-per-customer-median', charts.changes_per_customer_median.data, charts.changes_per_customer_median.layout, cfg);
+  Plotly.newPlot('chart-changes-per-customer-avg',    charts.changes_per_customer_avg.data,    charts.changes_per_customer_avg.layout,    cfg);
+
   var rcData = charts.connector_changes_by_region;
   function renderRegionChart() {
     var m = document.getElementById('region-month').value;

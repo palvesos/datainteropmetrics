@@ -24,6 +24,7 @@ def load_data(data_dir: str = "data") -> dict:
         "q14": "q14_data_interop_app_usage.parquet",
         "q15": "q15_connector_change_frequency.parquet",
         "q16": "q16_connector_changes_by_region.parquet",
+        "q17": "q17_changes_per_customer_by_region_ring.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -316,6 +317,38 @@ def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict
     }
 
 
+def _chart_changes_per_customer(df: pd.DataFrame, value_col: str, x_title: str, top_n: int = 8) -> dict:
+    """Horizontal grouped bar of avg/median changes per customer by region, one bar per ring.
+    Regions ranked by total customers (no 'Other' rollup — you can't average medians).
+    n_customers shown in hover so thin cells are visible."""
+    data = []
+    if len(df):
+        order = (df.groupby("REGION")["N_CUSTOMERS"].sum()
+                   .sort_values(ascending=False).head(top_n).index.tolist())
+        y = order[::-1]  # largest region at top
+        for ring in ("ga", "ea"):
+            sub = df[df["RING"] == ring].set_index("REGION")
+            if sub.empty:
+                continue
+            vals = [float(sub.loc[r, value_col]) if r in sub.index else 0 for r in y]
+            ns = [int(sub.loc[r, "N_CUSTOMERS"]) if r in sub.index else 0 for r in y]
+            data.append({
+                "y": y, "x": vals, "type": "bar", "orientation": "h", "name": ring,
+                "marker": {"color": _RING_COLORS[ring]}, "customdata": ns,
+                "hovertemplate": "%{y} · " + ring + ": %{x} (n=%{customdata})<extra></extra>",
+            })
+    return {
+        "data": data,
+        "layout": {
+            "barmode": "group",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"title": x_title, "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.08},
+            "margin": {"t": 20, "b": 50, "l": 160, "r": 20}, "autosize": True,
+        },
+    }
+
+
 def _build_region_variants(df: pd.DataFrame, top_n: int = 6) -> dict:
     """Precompute the by-region (one bar per ring) chart for every month selection, so the
     month dropdown just swaps a variant. Keys are the month string or 'all'."""
@@ -413,6 +446,8 @@ CHART_SQL = {
     "connector_changes_monthly": ["q15_connector_change_frequency"],
     "connector_changes_dow": ["q15_connector_change_frequency"],
     "connector_changes_by_region": ["q16_connector_changes_by_region"],
+    "changes_per_customer_median": ["q17_changes_per_customer_by_region_ring"],
+    "changes_per_customer_avg": ["q17_changes_per_customer_by_region_ring"],
 }
 
 
@@ -584,6 +619,10 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
             "connector_changes_by_region": _build_region_variants(data["q16"]),
+            "changes_per_customer_median": _chart_changes_per_customer(
+                data["q17"], "MEDIAN_CHANGES_PER_CUSTOMER", "Median changes / customer (12 mo.)"),
+            "changes_per_customer_avg": _chart_changes_per_customer(
+                data["q17"], "AVG_CHANGES_PER_CUSTOMER", "Avg changes / customer (12 mo.)"),
         },
         "tables": {
             "adoption_trend": table_rows,
