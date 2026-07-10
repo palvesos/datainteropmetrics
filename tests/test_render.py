@@ -306,36 +306,36 @@ def test_compute_metrics_connector_changes_dow(sample_data):
 
 def test_compute_metrics_region_variants_shape(sample_data):
     obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
-    assert obj["default"] == "all|all"
+    assert obj["default"] == "all"
     assert obj["months"] == ["2026-05", "2026-06"]
-    # a variant exists for every month x ring combination (+ the "all" options)
-    for ring in ("all", "ga", "ea"):
-        for month in ("all", "2026-05", "2026-06"):
-            assert f"{month}|{ring}" in obj["variants"]
+    # one variant per month + "all" (no ring dimension anymore)
+    assert set(obj["variants"].keys()) == {"all", "2026-05", "2026-06"}
 
 
-def test_region_variant_all_all_aggregates_and_rolls_up_other(sample_data):
+def test_region_variant_all_has_one_bar_per_ring(sample_data):
     obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
-    chart = obj["variants"]["all|all"]
-    ar, rc = chart["data"][0], chart["data"][1]
-    assert chart["layout"]["barmode"] == "stack" and ar["orientation"] == "h"
-    # y reversed so largest (Frankfurt: 40+9 / 90+14) is last (top), "Other" first (bottom)
-    assert ar["y"][-1] == "EU (Frankfurt)"
-    assert ar["x"][-1] == 49 and rc["x"][-1] == 104
-    # 8 regions -> top 6 + Other (2 smallest: AP Tokyo 0/3, AP Mumbai 2/0)
-    assert ar["y"][0] == "Other"
-    assert ar["x"][0] == 2 and rc["x"][0] == 3
+    chart = obj["variants"]["all"]
+    assert chart["layout"]["barmode"] == "group"
+    # one trace (bar) per ring present in the data: ga then ea
+    assert [t["name"] for t in chart["data"]] == ["ga", "ea"]
+    ga, ea = chart["data"][0], chart["data"][1]
+    assert ga["orientation"] == "h"
+    # y reversed so largest region (Frankfurt, all-ga: 130+23=153) is last (top), Other first
+    assert ga["y"][-1] == "EU (Frankfurt)"
+    assert ga["x"][-1] == 153 and ea["x"][-1] == 0
+    assert ga["y"][0] == "Other"  # 8 regions -> top 6 + Other
+    # Other = AP Tokyo (ga, 3) + AP Mumbai (ea, 2)
+    assert ga["x"][0] == 3 and ea["x"][0] == 2
 
 
-def test_region_variant_month_ring_filter(sample_data):
+def test_region_variant_month_filter(sample_data):
     obj = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
-    # June + ga only: 5 ga regions in June, no Other; ea rows excluded
-    chart = obj["variants"]["2026-06|ga"]
-    regions = chart["data"][0]["y"]
-    assert "Other" not in regions
-    assert "AP (Singapore)" not in regions  # that row is ea
-    assert chart["data"][0]["y"][-1] == "EU (Frankfurt)"
-    assert chart["data"][0]["x"][-1] == 40 and chart["data"][1]["x"][-1] == 90
+    # June only: Frankfurt is ga with 40+90=130 (excludes the 2026-05 rows)
+    chart = obj["variants"]["2026-06"]
+    ga = chart["data"][0]
+    assert ga["name"] == "ga"
+    assert ga["y"][-1] == "EU (Frankfurt)"
+    assert ga["x"][-1] == 130
 
 
 # --- SQL panels ---

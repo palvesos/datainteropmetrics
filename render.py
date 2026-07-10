@@ -277,35 +277,37 @@ def _chart_connector_changes_dow(df: pd.DataFrame) -> dict:
     }
 
 
+_RING_COLORS = {"ga": "#60a5fa", "ea": "#f59e0b"}
+
+
 def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict:
-    """Horizontal stacked bar of connector change events by cloud region (top-N + Other),
-    split add/remove vs reconfigure. Accepts any (month/ring) subset of q16."""
-    regions: list = []
-    ar: list = []
-    rc: list = []
+    """Horizontal grouped bar of connector change events (add/remove + reconfigure) by cloud
+    region (top-N + Other), one bar per ring (ga/ea) — only for rings present in the data."""
+    data = []
     if len(df):
-        g = df.groupby("REGION", as_index=False)[["ADD_REMOVE_EVENTS", "RECONFIGURE_EVENTS"]].sum()
-        g["total"] = g["ADD_REMOVE_EVENTS"] + g["RECONFIGURE_EVENTS"]
-        g = g.sort_values("total", ascending=False)
-        top, rest = g.head(top_n), g.iloc[top_n:]
-        regions = top["REGION"].tolist()
-        ar = [int(v) for v in top["ADD_REMOVE_EVENTS"]]
-        rc = [int(v) for v in top["RECONFIGURE_EVENTS"]]
-        if len(rest):
-            regions.append("Other")
-            ar.append(int(rest["ADD_REMOVE_EVENTS"].sum()))
-            rc.append(int(rest["RECONFIGURE_EVENTS"].sum()))
-        # reverse so the largest region sits at the top and "Other" at the bottom
-        regions, ar, rc = regions[::-1], ar[::-1], rc[::-1]
+        g = df.copy()
+        g["events"] = g["ADD_REMOVE_EVENTS"] + g["RECONFIGURE_EVENTS"]
+        # rank regions by total events across rings, keep top-N + Other
+        totals = g.groupby("REGION")["events"].sum().sort_values(ascending=False)
+        top_regions = totals.head(top_n).index.tolist()
+        keep = totals.index.isin(top_regions)
+        region_order = top_regions + (["Other"] if (~keep).any() else [])
+        g["region_label"] = g["REGION"].where(g["REGION"].isin(top_regions), "Other")
+        pivot = g.groupby(["region_label", "RING"])["events"].sum().unstack("RING").fillna(0)
+        # display largest region at top, "Other" at the bottom
+        y = region_order[::-1]
+        for ring in ("ga", "ea"):  # deterministic order; only rings present in the data
+            if ring in pivot.columns:
+                data.append({
+                    "y": y,
+                    "x": [int(pivot.loc[r, ring]) if r in pivot.index else 0 for r in y],
+                    "type": "bar", "orientation": "h", "name": ring,
+                    "marker": {"color": _RING_COLORS[ring]},
+                })
     return {
-        "data": [
-            {"y": regions, "x": ar, "type": "bar", "orientation": "h",
-             "name": "Add / Remove", "marker": {"color": "#60a5fa"}},
-            {"y": regions, "x": rc, "type": "bar", "orientation": "h",
-             "name": "Reconfigure", "marker": {"color": "#f59e0b"}},
-        ],
+        "data": data,
         "layout": {
-            "barmode": "stack",
+            "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
             "xaxis": {"title": "Change events", "gridcolor": "#334155"},
             "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.08},
@@ -315,17 +317,15 @@ def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict
 
 
 def _build_region_variants(df: pd.DataFrame, top_n: int = 6) -> dict:
-    """Precompute the by-region bar for every month x ring selection, so the dashboard's
-    dropdowns just swap a variant. Keys are '<month|all>|<ring|all>'."""
+    """Precompute the by-region (one bar per ring) chart for every month selection, so the
+    month dropdown just swaps a variant. Keys are the month string or 'all'."""
     df = df.copy()
     months = sorted(df["MONTH"].dt.strftime("%Y-%m").unique().tolist())
-    variants = {}
-    for ring in ("all", "ga", "ea"):
-        dfr = df if ring == "all" else df[df["RING"] == ring]
-        for month in ["all"] + months:
-            dfm = dfr if month == "all" else dfr[dfr["MONTH"].dt.strftime("%Y-%m") == month]
-            variants[f"{month}|{ring}"] = _chart_connector_changes_by_region(dfm, top_n)
-    return {"variants": variants, "months": months, "default": "all|all"}
+    variants = {"all": _chart_connector_changes_by_region(df, top_n)}
+    for month in months:
+        dfm = df[df["MONTH"].dt.strftime("%Y-%m") == month]
+        variants[month] = _chart_connector_changes_by_region(dfm, top_n)
+    return {"variants": variants, "months": months, "default": "all"}
 
 
 def _chart_deployment_option_bar(df: pd.DataFrame) -> dict:

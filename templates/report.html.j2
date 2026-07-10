@@ -298,13 +298,6 @@
     <h3>Connector Changes by Cloud Region — ga+ea rings</h3>
     <div class="filter-bar">
       <label>Month <select id="region-month" onchange="renderRegionChart()"></select></label>
-      <label>Ring
-        <select id="region-ring" onchange="renderRegionChart()">
-          <option value="all">All (ga+ea)</option>
-          <option value="ga">ga</option>
-          <option value="ea">ea</option>
-        </select>
-      </label>
     </div>
     <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
     {{ sql_panel('connector_changes_by_region') }}
@@ -352,8 +345,7 @@
   var rcData = charts.connector_changes_by_region;
   function renderRegionChart() {
     var m = document.getElementById('region-month').value;
-    var r = document.getElementById('region-ring').value;
-    var v = rcData.variants[m + '|' + r] || rcData.variants[rcData.default];
+    var v = rcData.variants[m] || rcData.variants[rcData.default];
     Plotly.react('chart-connector-changes-by-region', v.data, v.layout, cfg);
   }
   (function initRegionChart() {
