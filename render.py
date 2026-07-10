@@ -25,6 +25,7 @@ def load_data(data_dir: str = "data") -> dict:
         "q15": "q15_connector_change_frequency.parquet",
         "q16": "q16_connector_changes_by_region.parquet",
         "q17": "q17_changes_per_customer_by_region_ring.parquet",
+        "q18": "q18_change_heatmap_region_weekday.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -349,6 +350,56 @@ def _chart_changes_per_customer(df: pd.DataFrame, value_col: str, x_title: str, 
     }
 
 
+_WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _heatmap_region_weekday(df: pd.DataFrame, ring: str, ctype: str, top_n: int = 10) -> dict:
+    """Region x weekday heatmap; cell = avg changes per tenant. `ring` in all/ga/ea, `ctype`
+    in both/add_remove/reconfigure. Denominator = tenants in region x ring (rings are disjoint,
+    so ring='all' sums the per-ring tenant counts)."""
+    sub = df if ring == "all" else df[df["RING"] == ring]
+    ev = sub if ctype == "both" else sub[sub["CHANGE_TYPE"] == ctype]
+    # tenant denominator per region (one N per region x ring, summed across rings for 'all')
+    nt = sub.drop_duplicates(["REGION", "RING"]).groupby("REGION")["N_TENANTS"].sum()
+    nt = nt[nt > 0].sort_values(ascending=False).head(top_n)
+    regions = nt.index.tolist()
+    events = (ev.groupby(["REGION", "WEEKDAY"])["EVENTS"].sum()
+                if len(ev) else pd.Series(dtype=float))
+    z = []
+    for r in regions:
+        row = []
+        for wd in range(1, 8):
+            e = int(events.get((r, wd), 0)) if len(events) else 0
+            row.append(round(e / nt[r], 3) if nt[r] else 0.0)
+        z.append(row)
+    # reverse so the largest region is at the top of the heatmap
+    regions, z = regions[::-1], z[::-1]
+    return {
+        "data": [{
+            "type": "heatmap", "x": _WEEKDAYS, "y": regions, "z": z,
+            "colorscale": [[0, "#0f172a"], [0.5, "#1e40af"], [1, "#60a5fa"]],
+            "colorbar": {"title": "avg/tenant", "titlefont": {"color": "#94a3b8"},
+                         "tickfont": {"color": "#94a3b8"}},
+            "hovertemplate": "%{y} · %{x}: %{z} changes/tenant<extra></extra>",
+        }],
+        "layout": {
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"side": "top", "gridcolor": "#334155"},
+            "yaxis": {"gridcolor": "#334155", "automargin": True},
+            "margin": {"t": 30, "b": 20, "l": 160, "r": 20}, "autosize": True,
+        },
+    }
+
+
+def _build_heatmap_variants(df: pd.DataFrame) -> dict:
+    """Precompute the region x weekday heatmap for every ring x change-type selection."""
+    variants = {}
+    for ring in ("all", "ga", "ea"):
+        for ctype in ("both", "add_remove", "reconfigure"):
+            variants[f"{ring}|{ctype}"] = _heatmap_region_weekday(df, ring, ctype)
+    return {"variants": variants, "default": "all|both"}
+
+
 def _build_region_variants(df: pd.DataFrame, top_n: int = 6) -> dict:
     """Precompute the by-region (one bar per ring) chart for every month selection, so the
     month dropdown just swaps a variant. Keys are the month string or 'all'."""
@@ -448,6 +499,7 @@ CHART_SQL = {
     "connector_changes_by_region": ["q16_connector_changes_by_region"],
     "changes_per_customer_median": ["q17_changes_per_customer_by_region_ring"],
     "changes_per_customer_avg": ["q17_changes_per_customer_by_region_ring"],
+    "change_heatmap": ["q18_change_heatmap_region_weekday"],
 }
 
 
@@ -623,6 +675,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
                 data["q17"], "MEDIAN_CHANGES_PER_TENANT", "Median add/removes / tenant (12 mo.)"),
             "changes_per_customer_avg": _chart_changes_per_customer(
                 data["q17"], "AVG_CHANGES_PER_TENANT", "Avg add/removes / tenant (12 mo.)"),
+            "change_heatmap": _build_heatmap_variants(data["q18"]),
         },
         "tables": {
             "adoption_trend": table_rows,

@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_seventeen_keys(tmp_path, sample_data):
+def test_load_data_returns_eighteen_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -27,6 +27,7 @@ def test_load_data_returns_seventeen_keys(tmp_path, sample_data):
         "q15": "q15_connector_change_frequency.parquet",
         "q16": "q16_connector_changes_by_region.parquet",
         "q17": "q17_changes_per_customer_by_region_ring.parquet",
+        "q18": "q18_change_heatmap_region_weekday.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -88,6 +89,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "connector_changes_monthly", "connector_changes_dow",
         "connector_changes_by_region",
         "changes_per_customer_median", "changes_per_customer_avg",
+        "change_heatmap",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -356,6 +358,34 @@ def test_changes_per_tenant_charts(sample_data):
     assert ga_med["customdata"][-1] == 36
     # avg chart uses the avg column
     assert avg["data"][0]["x"][-1] == 3.64
+
+
+def test_change_heatmap_variants(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
+    assert obj["default"] == "all|both"
+    # 3 rings x 3 change-types
+    assert len(obj["variants"]) == 9
+    for ring in ("all", "ga", "ea"):
+        for ctype in ("both", "add_remove", "reconfigure"):
+            assert f"{ring}|{ctype}" in obj["variants"]
+    hm = obj["variants"]["all|both"]["data"][0]
+    assert hm["type"] == "heatmap"
+    assert hm["x"] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    # regions reversed so largest by tenants (Frankfurt: ga10+ea2=12) is at the top
+    assert hm["y"][-1] == "EU (Frankfurt)"
+    # Frankfurt Tue = (ga add 8 + ea add 4)=12 / 12 tenants = 1.0
+    assert hm["z"][-1][1] == 1.0
+    # Frankfurt Wed = reconfigure 20 / 12 = 1.667
+    assert hm["z"][-1][2] == round(20 / 12, 3)
+
+
+def test_change_heatmap_type_and_ring_filter(sample_data):
+    obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
+    # ga only + reconfigure only: Frankfurt Wed = 20 / 10 (ga tenants) = 2.0; Tue add/remove excluded
+    hm = obj["variants"]["ga|reconfigure"]["data"][0]
+    fr = hm["y"].index("EU (Frankfurt)")
+    assert hm["z"][fr][2] == 2.0   # Wed reconfigure
+    assert hm["z"][fr][1] == 0.0   # Tue (was add/remove) now empty
 
 
 # --- SQL panels ---
