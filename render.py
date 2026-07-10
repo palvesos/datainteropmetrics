@@ -318,34 +318,43 @@ def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict
     }
 
 
-def _chart_changes_per_customer(df: pd.DataFrame, value_col: str, x_title: str, top_n: int = 8) -> dict:
-    """Horizontal grouped bar of avg/median changes per tenant by region, one bar per ring.
-    Regions ranked by total tenants (no 'Other' rollup — you can't average medians).
-    n_tenants shown in hover so thin cells are visible."""
+def _chart_changes_per_tenant_combo(df: pd.DataFrame, top_n: int = 8) -> dict:
+    """Vertical combo by region (top-N by tenants): grouped bars = AVG add/removes per tenant
+    per ring, dashed line+markers = MEDIAN per ring. Value labels on both bars and median."""
     data = []
     if len(df):
-        order = (df.groupby("REGION")["N_TENANTS"].sum()
-                   .sort_values(ascending=False).head(top_n).index.tolist())
-        y = order[::-1]  # largest region at top
+        regions = (df.drop_duplicates(["REGION", "RING"]).groupby("REGION")["N_TENANTS"].sum()
+                     .sort_values(ascending=False).head(top_n).index.tolist())
         for ring in ("ga", "ea"):
             sub = df[df["RING"] == ring].set_index("REGION")
-            if sub.empty:
-                continue
-            vals = [float(sub.loc[r, value_col]) if r in sub.index else 0 for r in y]
-            ns = [int(sub.loc[r, "N_TENANTS"]) if r in sub.index else 0 for r in y]
+            avg = [round(float(sub.loc[r, "AVG_CHANGES_PER_TENANT"]), 2) if r in sub.index else 0 for r in regions]
+            med = [round(float(sub.loc[r, "MEDIAN_CHANGES_PER_TENANT"]), 2) if r in sub.index else 0 for r in regions]
+            ns = [int(sub.loc[r, "N_TENANTS"]) if r in sub.index else 0 for r in regions]
+            col = _RING_COLORS[ring]
             data.append({
-                "y": y, "x": vals, "type": "bar", "orientation": "h", "name": ring,
-                "marker": {"color": _RING_COLORS[ring]}, "customdata": ns,
-                "hovertemplate": "%{y} · " + ring + ": %{x} (n=%{customdata})<extra></extra>",
+                "x": regions, "y": avg, "type": "bar", "name": ring + " avg",
+                "marker": {"color": col}, "customdata": ns,
+                "text": [f"{v:.1f}" if v else "" for v in avg], "textposition": "outside",
+                "textfont": {"color": "#e2e8f0"},
+                "hovertemplate": "%{x} · " + ring + " avg: %{y} (n=%{customdata})<extra></extra>",
+            })
+            data.append({
+                "x": regions, "y": med, "type": "scatter", "mode": "lines+markers+text",
+                "name": ring + " median", "line": {"color": col, "width": 2, "dash": "dash"},
+                "marker": {"color": col, "size": 7},
+                "text": [f"{v:g}" if v else "" for v in med], "textposition": "top center",
+                "textfont": {"color": "#e2e8f0"},
+                "hovertemplate": "%{x} · " + ring + " median: %{y}<extra></extra>",
             })
     return {
         "data": data,
         "layout": {
             "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
-            "xaxis": {"title": x_title, "gridcolor": "#334155"},
-            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.08},
-            "margin": {"t": 20, "b": 50, "l": 160, "r": 20}, "autosize": True,
+            "xaxis": {"gridcolor": "#334155", "tickangle": -30},
+            "yaxis": {"title": "Add/removes per tenant (12 mo.)", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 110, "l": 60, "r": 20}, "autosize": True,
         },
     }
 
@@ -503,8 +512,7 @@ CHART_SQL = {
     "connector_changes_monthly": ["q15_connector_change_frequency"],
     "connector_changes_dow": ["q15_connector_change_frequency"],
     "connector_changes_by_region": ["q16_connector_changes_by_region"],
-    "changes_per_customer_median": ["q17_changes_per_customer_by_region_ring"],
-    "changes_per_customer_avg": ["q17_changes_per_customer_by_region_ring"],
+    "changes_per_tenant_combo": ["q17_changes_per_customer_by_region_ring"],
     "change_heatmap": ["q18_change_heatmap_region_weekday"],
 }
 
@@ -677,10 +685,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
             "connector_changes_by_region": _build_region_variants(data["q16"]),
-            "changes_per_customer_median": _chart_changes_per_customer(
-                data["q17"], "MEDIAN_CHANGES_PER_TENANT", "Median add/removes / tenant (12 mo.)"),
-            "changes_per_customer_avg": _chart_changes_per_customer(
-                data["q17"], "AVG_CHANGES_PER_TENANT", "Avg add/removes / tenant (12 mo.)"),
+            "changes_per_tenant_combo": _chart_changes_per_tenant_combo(data["q17"]),
             "change_heatmap": _build_heatmap_variants(data["q18"]),
         },
         "tables": {

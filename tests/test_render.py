@@ -88,7 +88,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "interop_apps_dev", "interop_apps_prod",
         "connector_changes_monthly", "connector_changes_dow",
         "connector_changes_by_region",
-        "changes_per_customer_median", "changes_per_customer_avg",
+        "changes_per_tenant_combo",
         "change_heatmap",
     }
     assert set(metrics["charts"].keys()) == expected
@@ -342,22 +342,22 @@ def test_region_variant_month_filter(sample_data):
     assert ga["x"][-1] == 130
 
 
-def test_changes_per_tenant_charts(sample_data):
-    charts = compute_metrics(sample_data)["charts"]
-    med = charts["changes_per_customer_median"]
-    avg = charts["changes_per_customer_avg"]
-    assert med["layout"]["barmode"] == "group"
-    assert [t["name"] for t in med["data"]] == ["ga", "ea"]
-    ga_med, ea_med = med["data"][0], med["data"][1]
-    assert ga_med["orientation"] == "h"
-    # regions ranked by total tenants; Frankfurt (36+1) is largest -> top (last)
-    assert ga_med["y"][-1] == "EU (Frankfurt)"
-    assert ga_med["x"][-1] == 2.0            # Frankfurt ga median
-    assert ea_med["x"][-1] == 22.0           # Frankfurt ea median (n=1)
-    # n_tenants carried for hover context
-    assert ga_med["customdata"][-1] == 36
-    # avg chart uses the avg column
-    assert avg["data"][0]["x"][-1] == 3.64
+def test_changes_per_tenant_combo(sample_data):
+    chart = compute_metrics(sample_data)["charts"]["changes_per_tenant_combo"]
+    assert chart["layout"]["barmode"] == "group"
+    # 4 traces: ga avg (bar), ga median (line), ea avg (bar), ea median (line)
+    assert [t["name"] for t in chart["data"]] == ["ga avg", "ga median", "ea avg", "ea median"]
+    ga_avg, ga_med, ea_avg, ea_med = chart["data"]
+    assert ga_avg["type"] == "bar" and ga_med["type"] == "scatter"
+    assert "+text" in ga_med["mode"]
+    # regions ranked by total tenants; Frankfurt (36+1) is largest -> first on x
+    assert ga_avg["x"][0] == "EU (Frankfurt)"
+    assert ga_avg["y"][0] == 3.64          # Frankfurt ga avg
+    assert ga_med["y"][0] == 2.0           # Frankfurt ga median
+    assert ea_avg["y"][0] == 22.0          # Frankfurt ea avg (n=1)
+    # value labels present on bars and median
+    assert ga_avg["text"][0] == "3.6" and ga_med["text"][0] == "2"
+    assert ga_avg["customdata"][0] == 36
 
 
 def test_change_heatmap_variants(sample_data):

@@ -302,9 +302,10 @@
     <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
     {{ sql_panel('connector_changes_by_region') }}
   </div>
-  <div class="chart-row">
-    <div class="section"><h3>Median Connector Add/Removes per Tenant by Region × Ring (12 mo.)</h3><div id="chart-changes-per-customer-median" class="chart-container tall"></div>{{ sql_panel('changes_per_customer_median') }}</div>
-    <div class="section"><h3>Average Connector Add/Removes per Tenant by Region × Ring (12 mo.)</h3><div id="chart-changes-per-customer-avg" class="chart-container tall"></div>{{ sql_panel('changes_per_customer_avg') }}</div>
+  <div class="section">
+    <h3>Connector Add/Removes per Tenant by Region × Ring — Avg (bars) &amp; Median (line), 12 mo.</h3>
+    <div id="chart-changes-per-tenant" class="chart-container tall"></div>
+    {{ sql_panel('changes_per_tenant_combo') }}
   </div>
   <div class="section">
     <h3>Avg Connector Changes per Tenant — Region × Weekday (12 mo., UTC)</h3>
@@ -347,8 +348,7 @@
     connector_changes_monthly: {{ charts.connector_changes_monthly | tojson }},
     connector_changes_dow:     {{ charts.connector_changes_dow | tojson }},
     connector_changes_by_region: {{ charts.connector_changes_by_region | tojson }},
-    changes_per_customer_median: {{ charts.changes_per_customer_median | tojson }},
-    changes_per_customer_avg:    {{ charts.changes_per_customer_avg | tojson }},
+    changes_per_tenant_combo: {{ charts.changes_per_tenant_combo | tojson }},
     change_heatmap: {{ charts.change_heatmap | tojson }}
   };
 
@@ -370,8 +370,7 @@
   Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
   Plotly.newPlot('chart-connector-changes-monthly', charts.connector_changes_monthly.data, charts.connector_changes_monthly.layout, cfg);
   Plotly.newPlot('chart-connector-changes-dow',     charts.connector_changes_dow.data,     charts.connector_changes_dow.layout,     cfg);
-  Plotly.newPlot('chart-changes-per-customer-median', charts.changes_per_customer_median.data, charts.changes_per_customer_median.layout, cfg);
-  Plotly.newPlot('chart-changes-per-customer-avg',    charts.changes_per_customer_avg.data,    charts.changes_per_customer_avg.layout,    cfg);
+  Plotly.newPlot('chart-changes-per-tenant', charts.changes_per_tenant_combo.data, charts.changes_per_tenant_combo.layout, cfg);
 
   var hmData = charts.change_heatmap;
   function renderHeatmap() {
