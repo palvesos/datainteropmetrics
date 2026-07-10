@@ -109,6 +109,12 @@ def sample_data():
         "ADD_REMOVE_EVENTS": [3, 2, 1, 4, 2],
         "RECONFIGURE_EVENTS": [5, 1, 0, 3, 4],
     })
+    q16 = pd.DataFrame({
+        "REGION": ["EU (Frankfurt)", "US East (N. Virginia)", "EU (Ireland)",
+                   "AP (Singapore)", "EU (London)", "Canada (Central)", "AP (Tokyo)", "AP (Mumbai)"],
+        "ADD_REMOVE_EVENTS": [49, 22, 10, 10, 16, 16, 0, 2],
+        "RECONFIGURE_EVENTS": [104, 49, 26, 26, 13, 4, 3, 0],
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
-            "q13": q13, "q14": q14, "q15": q15}
+            "q13": q13, "q14": q14, "q15": q15, "q16": q16}

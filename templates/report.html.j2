@@ -290,6 +290,11 @@
     <div class="section"><h3>Connector Changes per Month (add/remove + reconfigure)</h3><div id="chart-connector-changes-monthly" class="chart-container tall"></div>{{ sql_panel('connector_changes_monthly') }}</div>
     <div class="section"><h3>Connector Changes by Day of Week (12 mo., UTC)</h3><div id="chart-connector-changes-dow" class="chart-container tall"></div>{{ sql_panel('connector_changes_dow') }}</div>
   </div>
+  <div class="section">
+    <h3>Connector Changes by Cloud Region — ga+ea rings (12 mo.)</h3>
+    <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
+    {{ sql_panel('connector_changes_by_region') }}
+  </div>
 </div>
 
 <script>
@@ -308,7 +313,8 @@
     interop_apps_dev:  {{ charts.interop_apps_dev | tojson }},
     interop_apps_prod: {{ charts.interop_apps_prod | tojson }},
     connector_changes_monthly: {{ charts.connector_changes_monthly | tojson }},
-    connector_changes_dow:     {{ charts.connector_changes_dow | tojson }}
+    connector_changes_dow:     {{ charts.connector_changes_dow | tojson }},
+    connector_changes_by_region: {{ charts.connector_changes_by_region | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -329,6 +335,7 @@
   Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
   Plotly.newPlot('chart-connector-changes-monthly', charts.connector_changes_monthly.data, charts.connector_changes_monthly.layout, cfg);
   Plotly.newPlot('chart-connector-changes-dow',     charts.connector_changes_dow.data,     charts.connector_changes_dow.layout,     cfg);
+  Plotly.newPlot('chart-connector-changes-by-region', charts.connector_changes_by_region.data, charts.connector_changes_by_region.layout, cfg);
 
   function toggleSql(key) {
     var panel = document.getElementById('sql-' + key);

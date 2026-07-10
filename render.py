@@ -23,6 +23,7 @@ def load_data(data_dir: str = "data") -> dict:
         "q13": "q13_data_interop_customers.parquet",
         "q14": "q14_data_interop_app_usage.parquet",
         "q15": "q15_connector_change_frequency.parquet",
+        "q16": "q16_connector_changes_by_region.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -276,6 +277,40 @@ def _chart_connector_changes_dow(df: pd.DataFrame) -> dict:
     }
 
 
+def _chart_connector_changes_by_region(df: pd.DataFrame, top_n: int = 6) -> dict:
+    """Horizontal stacked bar of connector change events by cloud region (top-N + Other),
+    split add/remove vs reconfigure. ga+ea rings only."""
+    df = df.copy()
+    df["total"] = df["ADD_REMOVE_EVENTS"] + df["RECONFIGURE_EVENTS"]
+    df = df.sort_values("total", ascending=False)
+    top = df.head(top_n)
+    rest = df.iloc[top_n:]
+    regions = top["REGION"].tolist()
+    ar = [int(v) for v in top["ADD_REMOVE_EVENTS"]]
+    rc = [int(v) for v in top["RECONFIGURE_EVENTS"]]
+    if len(rest):
+        regions.append("Other")
+        ar.append(int(rest["ADD_REMOVE_EVENTS"].sum()))
+        rc.append(int(rest["RECONFIGURE_EVENTS"].sum()))
+    # reverse so the largest region sits at the top and "Other" at the bottom
+    regions, ar, rc = regions[::-1], ar[::-1], rc[::-1]
+    return {
+        "data": [
+            {"y": regions, "x": ar, "type": "bar", "orientation": "h",
+             "name": "Add / Remove", "marker": {"color": "#60a5fa"}},
+            {"y": regions, "x": rc, "type": "bar", "orientation": "h",
+             "name": "Reconfigure", "marker": {"color": "#f59e0b"}},
+        ],
+        "layout": {
+            "barmode": "stack",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"title": "Change events (12 mo.)", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.08},
+            "margin": {"t": 20, "b": 50, "l": 160, "r": 20}, "autosize": True,
+        },
+    }
+
+
 def _chart_deployment_option_bar(df: pd.DataFrame) -> dict:
     df = df.sort_values("USAGE_DEPLOYMENT_OPTION")
     opts = df["USAGE_DEPLOYMENT_OPTION"].tolist()
@@ -360,6 +395,7 @@ CHART_SQL = {
     "interop_apps_prod": ["q14_data_interop_app_usage"],
     "connector_changes_monthly": ["q15_connector_change_frequency"],
     "connector_changes_dow": ["q15_connector_change_frequency"],
+    "connector_changes_by_region": ["q16_connector_changes_by_region"],
 }
 
 
@@ -530,6 +566,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "interop_apps_prod": _chart_interop_app_usage(data["q14"], "PROD_CUSTOMERS", "PROD_APPS"),
             "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
+            "connector_changes_by_region": _chart_connector_changes_by_region(data["q16"]),
         },
         "tables": {
             "adoption_trend": table_rows,

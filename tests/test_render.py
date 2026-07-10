@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_fifteen_keys(tmp_path, sample_data):
+def test_load_data_returns_sixteen_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -25,6 +25,7 @@ def test_load_data_returns_fifteen_keys(tmp_path, sample_data):
         "q13": "q13_data_interop_customers.parquet",
         "q14": "q14_data_interop_app_usage.parquet",
         "q15": "q15_connector_change_frequency.parquet",
+        "q16": "q16_connector_changes_by_region.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -84,6 +85,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "interop_dev", "interop_prod",
         "interop_apps_dev", "interop_apps_prod",
         "connector_changes_monthly", "connector_changes_dow",
+        "connector_changes_by_region",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -296,6 +298,21 @@ def test_compute_metrics_connector_changes_dow(sample_data):
     assert ar["y"][5] == 1
     # Reconfigure Tue = 5 + 3 + 4 = 12
     assert rc["y"][1] == 12
+
+
+def test_compute_metrics_connector_changes_by_region(sample_data):
+    chart = compute_metrics(sample_data)["charts"]["connector_changes_by_region"]
+    ar, rc = chart["data"][0], chart["data"][1]
+    assert chart["layout"]["barmode"] == "stack"
+    assert ar["orientation"] == "h"
+    # 8 regions -> top 6 + Other; y reversed so largest (Frankfurt) is last (top)
+    assert ar["y"][-1] == "EU (Frankfurt)"
+    assert ar["y"][0] == "Other"
+    # Other = the 2 smallest by total: AP (Tokyo) 0+3 and AP (Mumbai) 2+0
+    assert ar["x"][0] == 2  # add/remove for Other = 0 + 2
+    assert rc["x"][0] == 3  # reconfigure for Other = 3 + 0
+    # Frankfurt stacked values intact
+    assert ar["x"][-1] == 49 and rc["x"][-1] == 104
 
 
 # --- SQL panels ---
