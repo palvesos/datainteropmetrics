@@ -20,6 +20,7 @@ def load_data(data_dir: str = "data") -> dict:
         "q10": "q10_sku_gap_targeting.parquet",
         "q11": "q11_infra_no_telemetry.parquet",
         "q12": "q12_data_fabric_trialing_monthly.parquet",
+        "q13": "q13_data_interop_customers.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -162,6 +163,36 @@ def _chart_data_fabric_providers(df: pd.DataFrame) -> dict:
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
             "xaxis": {"gridcolor": "#334155"}, "legend": {"bgcolor": "#1e293b"},
             "margin": {"t": 20, "b": 50, "l": 130, "r": 20}, "autosize": True,
+        },
+    }
+
+
+def _chart_interop_customers(df: pd.DataFrame, count_col: str, bar_color: str) -> dict:
+    """Combo chart: bar = # customers with O11 Data Fabric connections in a stage;
+    dashed line = that count as a % of the monthly O11+ODC customer base."""
+    df = df.sort_values("MONTH")
+    months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+    counts = [int(c) for c in df[count_col].tolist()]
+    denom = df["O11_ODC_CUSTOMERS"].tolist()
+    pct = [round(c / d * 100, 1) if d else 0.0 for c, d in zip(counts, denom)]
+    return {
+        "data": [
+            {"x": months, "y": counts, "type": "bar",
+             "name": "# Customers w/ Data Connectors to O11",
+             "marker": {"color": bar_color}, "yaxis": "y",
+             "text": counts, "textposition": "auto"},
+            {"x": months, "y": pct, "type": "scatter", "mode": "lines+markers+text",
+             "name": "% Customers have O11 and ODC",
+             "text": [f"{p}%" for p in pct], "textposition": "top center",
+             "line": {"color": "#94a3b8", "width": 2, "dash": "dash"}, "yaxis": "y2"},
+        ],
+        "layout": {
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "yaxis": {"title": "Customers", "gridcolor": "#334155"},
+            "yaxis2": {"title": "% O11 + ODC", "overlaying": "y", "side": "right",
+                       "gridcolor": "#334155", "ticksuffix": "%"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 50, "l": 60, "r": 60}, "autosize": True,
         },
     }
 
@@ -374,6 +405,8 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None) -> dict:
             "data_fabric_trend": _chart_data_fabric_trend(data["q7"], data["q12"]),
             "data_fabric_providers": _chart_data_fabric_providers(data["q8"]),
             "deployment_option_bar": _chart_deployment_option_bar(data["q9"]),
+            "interop_dev": _chart_interop_customers(data["q13"], "DEV_CUSTOMERS", "#60a5fa"),
+            "interop_prod": _chart_interop_customers(data["q13"], "PROD_CUSTOMERS", "#64748b"),
         },
         "tables": {
             "adoption_trend": table_rows,

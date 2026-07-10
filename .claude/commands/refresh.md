@@ -6,7 +6,7 @@ Fetch fresh data from Snowflake and regenerate the HTML report.
 
 Run these steps in order. If any step fails (non-zero exit code or exception), stop and print the error.
 
-### 1. Run the 12 queries and save as Parquet
+### 1. Run the 13 queries and save as Parquet
 
 For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean/numeric columns, and save to `data/`. Guard the conversions so empty result sets don't fail.
 
@@ -56,10 +56,11 @@ Per-query values:
 | q10 | `queries/q10_sku_gap_targeting.sql` | `data/q10_sku_gap_targeting.parquet` | — | — | `'ARR_EUR'` |
 | q11 | `queries/q11_infra_no_telemetry.sql` | `data/q11_infra_no_telemetry.parquet` | — | — | — |
 | q12 | `queries/q12_data_fabric_trialing_monthly.sql` | `data/q12_data_fabric_trialing_monthly.parquet` | `'MONTH'` | — | `'UNIQUE_TENANTS'`, `'UNIQUE_CUSTOMERS'`, `'TOTAL_CONNECTORS'` |
+| q13 | `queries/q13_data_interop_customers.sql` | `data/q13_data_interop_customers.parquet` | `'MONTH'` | — | `'DEV_CUSTOMERS'`, `'PROD_CUSTOMERS'`, `'O11_ODC_CUSTOMERS'` |
 
 For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 
-After running all 12 queries, confirm 12 Parquet files exist in `data/` before continuing.
+After running all 13 queries, confirm 13 Parquet files exist in `data/` before continuing.
 
 ### 2. Render the report
 

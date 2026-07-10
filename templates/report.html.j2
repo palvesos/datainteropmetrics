@@ -252,9 +252,9 @@
 </div>
 
 <div id="tab-datainterop" class="tab-content">
-  <div class="section">
-    <h3>Data InterOperability</h3>
-    <p>Content coming soon.</p>
+  <div class="chart-row">
+    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Development</h3><div id="chart-interop-dev" class="chart-container tall"></div></div>
+    <div class="section"><h3>Customers with Data Fabric Connections for O11 — Production</h3><div id="chart-interop-prod" class="chart-container tall"></div></div>
   </div>
 </div>
 
@@ -268,7 +268,9 @@
     arch_type_bar:     {{ charts.arch_type_bar | tojson }},
     data_fabric_trend:     {{ charts.data_fabric_trend | tojson }},
     data_fabric_providers: {{ charts.data_fabric_providers | tojson }},
-    deployment_option_bar: {{ charts.deployment_option_bar | tojson }}
+    deployment_option_bar: {{ charts.deployment_option_bar | tojson }},
+    interop_dev:  {{ charts.interop_dev | tojson }},
+    interop_prod: {{ charts.interop_prod | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -283,6 +285,8 @@
   Plotly.newPlot('chart-df-trend',           charts.data_fabric_trend.data,     charts.data_fabric_trend.layout,     cfg);
   Plotly.newPlot('chart-df-providers',       charts.data_fabric_providers.data, charts.data_fabric_providers.layout, cfg);
   Plotly.newPlot('chart-deployment-option',  charts.deployment_option_bar.data, charts.deployment_option_bar.layout, cfg);
+  Plotly.newPlot('chart-interop-dev',   charts.interop_dev.data,   charts.interop_dev.layout,   cfg);
+  Plotly.newPlot('chart-interop-prod',  charts.interop_prod.data,  charts.interop_prod.layout,  cfg);
 
   function switchTab(name) {
     document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
