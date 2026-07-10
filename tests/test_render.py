@@ -371,8 +371,9 @@ def test_change_heatmap_variants(sample_data):
     hm = obj["variants"]["all|both"]["data"][0]
     assert hm["type"] == "heatmap"
     assert hm["x"] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    # regions reversed so largest by tenants (Frankfurt: ga10+ea2=12) is at the top
-    assert hm["y"][-1] == "EU (Frankfurt)"
+    # regions reversed so largest by tenants (Frankfurt: ga10+ea2=12) is at the top;
+    # label carries per-ring tenant counts
+    assert hm["y"][-1] == "EU (Frankfurt)  (ga 10 · ea 2)"
     # Frankfurt Tue = (ga add 8 + ea add 4)=12 / 12 tenants = 1.0
     assert hm["z"][-1][1] == 1.0
     # Frankfurt Wed = reconfigure 20 / 12 = 1.667
@@ -383,7 +384,9 @@ def test_change_heatmap_type_and_ring_filter(sample_data):
     obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
     # ga only + reconfigure only: Frankfurt Wed = 20 / 10 (ga tenants) = 2.0; Tue add/remove excluded
     hm = obj["variants"]["ga|reconfigure"]["data"][0]
-    fr = hm["y"].index("EU (Frankfurt)")
+    # ga-only variant labels show just the ga count
+    assert "EU (Frankfurt)  (ga 10)" in hm["y"]
+    fr = hm["y"].index("EU (Frankfurt)  (ga 10)")
     assert hm["z"][fr][2] == 2.0   # Wed reconfigure
     assert hm["z"][fr][1] == 0.0   # Tue (was add/remove) now empty
 

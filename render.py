@@ -360,23 +360,29 @@ def _heatmap_region_weekday(df: pd.DataFrame, ring: str, ctype: str, top_n: int 
     sub = df if ring == "all" else df[df["RING"] == ring]
     ev = sub if ctype == "both" else sub[sub["CHANGE_TYPE"] == ctype]
     # tenant denominator per region (one N per region x ring, summed across rings for 'all')
-    nt = sub.drop_duplicates(["REGION", "RING"]).groupby("REGION")["N_TENANTS"].sum()
+    tn = sub.drop_duplicates(["REGION", "RING"])
+    nt = tn.groupby("REGION")["N_TENANTS"].sum()
     nt = nt[nt > 0].sort_values(ascending=False).head(top_n)
     regions = nt.index.tolist()
     events = (ev.groupby(["REGION", "WEEKDAY"])["EVENTS"].sum()
                 if len(ev) else pd.Series(dtype=float))
-    z = []
+
+    def _label(r):  # region name + tenant count per ring, e.g. "EU (Frankfurt)  (ga 10 · ea 2)"
+        rows = tn[tn["REGION"] == r]
+        parts = [f"{rg} {int(rows[rows['RING'] == rg]['N_TENANTS'].iloc[0])}"
+                 for rg in ("ga", "ea") if (rows["RING"] == rg).any()]
+        return f"{r}  ({' · '.join(parts)})" if parts else r
+
+    labels, z = [], []
     for r in regions:
-        row = []
-        for wd in range(1, 8):
-            e = int(events.get((r, wd), 0)) if len(events) else 0
-            row.append(round(e / nt[r], 3) if nt[r] else 0.0)
-        z.append(row)
+        labels.append(_label(r))
+        z.append([round(int(events.get((r, wd), 0)) / nt[r], 3) if nt[r] else 0.0
+                  for wd in range(1, 8)])
     # reverse so the largest region is at the top of the heatmap
-    regions, z = regions[::-1], z[::-1]
+    labels, z = labels[::-1], z[::-1]
     return {
         "data": [{
-            "type": "heatmap", "x": _WEEKDAYS, "y": regions, "z": z,
+            "type": "heatmap", "x": _WEEKDAYS, "y": labels, "z": z,
             "colorscale": [[0, "#0f172a"], [0.5, "#1e40af"], [1, "#60a5fa"]],
             "colorbar": {"title": "avg/tenant", "titlefont": {"color": "#94a3b8"},
                          "tickfont": {"color": "#94a3b8"}},
