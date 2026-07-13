@@ -336,6 +336,28 @@
     <div id="chart-change-heatmap" class="chart-container tall"></div>
     {{ sql_panel('change_heatmap') }}
   </div>
+  <div class="section">
+    <h3>Recommended Connector Freeze Window by Region (weekday-level, all-time)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Weekday with the lowest avg connector changes per tenant. Time-of-day isn't captured
+      (daily UTC snapshots, ~1-day lag), so this is weekday-level — weekends are quietest everywhere.
+      Values in parentheses are avg changes/tenant. Regions with ≥3 tenants.
+    </p>
+    <table>
+      <thead><tr><th>Region</th><th>Tenants</th><th>Best freeze day</th><th>Quietest weekday (Mon–Fri)</th><th>Busiest — avoid</th></tr></thead>
+      <tbody>
+        {% for r in tables.freeze_windows %}
+        <tr>
+          <td>{{ r.region }}</td>
+          <td>{{ r.tenants }}</td>
+          <td>{{ r.quietest_day }} ({{ r.quietest_avg }})</td>
+          <td>{{ r.quietest_biz_day }} ({{ r.quietest_biz_avg }})</td>
+          <td>{{ r.busiest_day }} ({{ r.busiest_avg }})</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>

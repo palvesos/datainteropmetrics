@@ -407,6 +407,36 @@ def _heatmap_region_weekday(df: pd.DataFrame, window: str, ring: str, ctype: str
     }
 
 
+def _freeze_windows(df: pd.DataFrame, min_tenants: int = 3) -> list:
+    """Per region (all-time, ga+ea, both change types): the weekday with the lowest avg changes
+    per tenant (best freeze day), the quietest business day (Mon-Fri), and the busiest day to
+    avoid. Weekday-level only — time-of-day isn't in the daily-snapshot telemetry."""
+    df = df[df["WINDOW_KEY"] == "all"]
+    if df.empty:
+        return []
+    names = {1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"}
+    biz = {1, 2, 3, 4, 5}
+    nt = df.drop_duplicates(["REGION", "RING"]).groupby("REGION")["N_TENANTS"].sum()
+    ev = df.groupby(["REGION", "WEEKDAY"])["EVENTS"].sum()
+    out = []
+    for region in nt[nt >= min_tenants].sort_values(ascending=False).index:
+        n = int(nt[region])
+        avgs = {wd: 0.0 for wd in range(1, 8)}
+        for wd in range(1, 8):
+            if (region, wd) in ev.index:
+                avgs[wd] = ev.loc[(region, wd)] / n
+        qd = min(range(1, 8), key=lambda k: (avgs[k], k))            # lowest avg, earliest on tie
+        qb = min(biz, key=lambda k: (avgs[k], k))
+        bd = max(range(1, 8), key=lambda k: (avgs[k], -k))           # highest avg, earliest on tie
+        out.append({
+            "region": region, "tenants": n,
+            "quietest_day": names[qd], "quietest_avg": round(avgs[qd], 2),
+            "quietest_biz_day": names[qb], "quietest_biz_avg": round(avgs[qb], 2),
+            "busiest_day": names[bd], "busiest_avg": round(avgs[bd], 2),
+        })
+    return out
+
+
 def _build_heatmap_variants(df: pd.DataFrame) -> dict:
     """Precompute the region x weekday heatmap for every window x ring x change-type selection."""
     variants = {}
@@ -694,6 +724,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "adoption_trend": table_rows,
             "sku_gap_targeting": sku_gap_targeting,
             "infra_no_telemetry": infra_no_telemetry,
+            "freeze_windows": _freeze_windows(data["q18"]),
         },
         "sql": _build_sql_map(query_dir),
     }

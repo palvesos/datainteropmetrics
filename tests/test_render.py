@@ -391,6 +391,21 @@ def test_change_heatmap_type_and_ring_filter(sample_data):
     assert hm["z"][fr][1] == 0.0   # Tue (was add/remove) now empty
 
 
+def test_freeze_windows_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["freeze_windows"]
+    # regions with >=3 tenants, ordered by tenant count desc: Frankfurt(12), N.Virginia(5), Ireland(4)
+    assert [r["region"] for r in rows] == [
+        "EU (Frankfurt)", "US East (N. Virginia)", "EU (Ireland)"]
+    fr = rows[0]
+    assert fr["tenants"] == 12
+    # Frankfurt busiest = Wed (reconfigure 20 / 12 = 1.67); quietest is a zero-activity day
+    assert fr["busiest_day"] == "Wed"
+    assert fr["busiest_avg"] == round(20 / 12, 2)
+    assert fr["quietest_avg"] == 0.0
+    # N. Virginia busiest = Wed (add/remove 10 / 5 = 2.0)
+    assert rows[1]["busiest_day"] == "Wed" and rows[1]["busiest_avg"] == 2.0
+
+
 def test_change_heatmap_window_filter(sample_data):
     obj = compute_metrics(sample_data)["charts"]["change_heatmap"]
     # last-month, ga, both: Frankfurt Tue add 3 / 8 tenants = 0.375; Wed reconfigure 5 / 8 = 0.625
