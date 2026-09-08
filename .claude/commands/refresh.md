@@ -6,7 +6,7 @@ Fetch fresh data from Snowflake and regenerate the HTML report.
 
 Run these steps in order. If any step fails (non-zero exit code or exception), stop and print the error.
 
-### 1. Run the 18 queries and save as Parquet
+### 1. Run the 23 queries and save as Parquet
 
 For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean/numeric columns, and save to `data/`. Guard the conversions so empty result sets don't fail.
 
@@ -62,10 +62,15 @@ Per-query values:
 | q16 | `queries/q16_connector_changes_by_region.sql` | `data/q16_connector_changes_by_region.parquet` | `'MONTH'` | — | `'ADD_REMOVE_EVENTS'`, `'RECONFIGURE_EVENTS'` |
 | q17 | `queries/q17_changes_per_customer_by_region_ring.sql` | `data/q17_changes_per_customer_by_region_ring.parquet` | — | — | `'AVG_CHANGES_PER_TENANT'`, `'MEDIAN_CHANGES_PER_TENANT'`, `'N_TENANTS'`, `'TOTAL_CHANGES'` |
 | q18 | `queries/q18_change_heatmap_region_weekday.sql` | `data/q18_change_heatmap_region_weekday.parquet` | — | — | `'WEEKDAY'`, `'EVENTS'`, `'N_TENANTS'` |
+| q19 | `queries/q19_o11_customers_removed_infra.sql` | `data/q19_o11_customers_removed_infra.parquet` | `'LAST_CONNECTOR_TELEMETRY_DAY'`, `'LAST_PLATFORM_USAGE_DAY'` | — | `'N_O11_ENVS'`, `'PEAK_CONNECTORS'`, `'LAST_KNOWN_CONNECTORS'`, `'DAYS_SINCE_CONNECTOR_TELEMETRY'` |
+| q20 | `queries/q20_connector_removal_events_by_company.sql` | `data/q20_connector_removal_events_by_company.parquet` | — | — | `'REMOVAL_EVENTS'`, `'TOTAL_CONNECTORS_REMOVED'`, `'PEAK_TOTAL_CONNECTORS'`, `'CONNECTORS_TODAY'` |
+| q21 | `queries/q21_multi_o11_infra_with_df.sql` | `data/q21_multi_o11_infra_with_df.parquet` | — | — | `'NUM_O11_INFRAS'`, `'NUM_DF_PROVIDERS'`, `'CURRENT_DF_CONNECTORS'` |
+| q22 | `queries/q22_connector_removal_events_multi_o11.sql` | `data/q22_connector_removal_events_multi_o11.parquet` | — | — | `'NUM_O11_INFRAS'`, `'REMOVAL_EVENTS'`, `'TOTAL_CONNECTORS_REMOVED'`, `'PEAK_TOTAL_CONNECTORS'`, `'CONNECTORS_TODAY'` |
+| q23 | `queries/q23_o11_customers_removed_infra_multi_o11.sql` | `data/q23_o11_customers_removed_infra_multi_o11.parquet` | `'LAST_CONNECTOR_TELEMETRY_DAY'`, `'LAST_PLATFORM_USAGE_DAY'` | — | `'NUM_O11_INFRAS'`, `'N_O11_ENVS'`, `'PEAK_CONNECTORS'`, `'LAST_KNOWN_CONNECTORS'`, `'DAYS_SINCE_CONNECTOR_TELEMETRY'` |
 
 For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 
-After running all 18 queries, confirm 18 Parquet files exist in `data/` before continuing.
+After running all 23 queries, confirm 23 Parquet files exist in `data/` before continuing.
 
 ### 2. Render the report
 

@@ -28,6 +28,11 @@ def test_load_data_returns_eighteen_keys(tmp_path, sample_data):
         "q16": "q16_connector_changes_by_region.parquet",
         "q17": "q17_changes_per_customer_by_region_ring.parquet",
         "q18": "q18_change_heatmap_region_weekday.parquet",
+        "q19": "q19_o11_customers_removed_infra.parquet",
+        "q20": "q20_connector_removal_events_by_company.parquet",
+        "q21": "q21_multi_o11_infra_with_df.parquet",
+        "q22": "q22_connector_removal_events_multi_o11.parquet",
+        "q23": "q23_o11_customers_removed_infra_multi_o11.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -191,6 +196,89 @@ def test_compute_metrics_targeting_tables(sample_data):
     assert len(metrics["tables"]["infra_no_telemetry"]) == 2
 
 
+def test_compute_metrics_o11_infra_removals_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["o11_infra_removals"]
+    assert len(rows) == 2
+    assert rows[0]["company"] == "Umbrella"    # sorted by days_silent desc (170 > 101)
+    assert rows[0]["days_silent"] == 170
+    assert rows[0]["last_seen"] == "2026-01-28"
+    assert rows[0]["n_envs"] == 1
+    assert rows[0]["peak_count"] == 1
+    assert rows[0]["last_count"] == 1
+    assert rows[1]["company"] == "Stark Ind"
+    assert rows[1]["n_envs"] == 2
+
+
+def test_compute_metrics_removal_events_by_company_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["removal_events_by_company"]
+    assert len(rows) == 3
+    # sorted by removal_events desc, tie-broken by connectors_removed desc
+    assert [r["company"] for r in rows] == ["Umbrella", "Stark Ind", "Wayne Enterprises"]
+    assert rows[0]["removal_events"] == 4
+    assert rows[0]["connectors_removed"] == 5
+    assert rows[0]["peak_connectors"] == 8
+    assert rows[0]["connectors_today"] == 8
+    assert rows[1]["peak_connectors"] == 6
+    assert rows[1]["connectors_today"] == 3
+
+
+def test_compute_metrics_multi_o11_with_df_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["multi_o11_with_df"]
+    assert len(rows) == 3
+    # sorted by df_connectors desc, tie-broken by o11_infras desc
+    assert [r["company"] for r in rows] == ["Cyberdyne", "Tyrell Corp", "Weyland"]
+    assert rows[0]["o11_infras"] == 2
+    assert rows[0]["df_connectors"] == 10
+    assert rows[1]["o11_infras"] == 5   # Tyrell before Weyland on infra tie-break at 4 connectors
+
+
+def test_render_has_multi_o11_with_df_table(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "Multiple O11 Infrastructures Using Data Fabric" in content
+    assert "Cyberdyne" in content
+    assert "toggleSql('multi_o11_with_df')" in content
+
+
+def test_compute_metrics_removal_events_multi_o11_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["removal_events_multi_o11"]
+    assert len(rows) == 2
+    assert [r["company"] for r in rows] == ["MultiCorp A", "MultiCorp B"]
+    assert rows[0]["o11_infras"] == 3
+    assert rows[0]["removal_events"] == 2
+    assert rows[0]["peak_connectors"] == 10
+    assert rows[0]["connectors_today"] == 7
+
+
+def test_compute_metrics_removal_events_multi_o11_empty(sample_data):
+    """q22 is empty in production; compute must degrade to an empty list, not raise."""
+    import pandas as pd
+    data = dict(sample_data)
+    data["q22"] = sample_data["q22"].iloc[0:0]  # empty, columns preserved
+    assert compute_metrics(data)["tables"]["removal_events_multi_o11"] == []
+
+
+def test_compute_metrics_o11_infra_removals_multi_o11_table(sample_data):
+    rows = compute_metrics(sample_data)["tables"]["o11_infra_removals_multi_o11"]
+    assert len(rows) == 1
+    assert rows[0]["company"] == "MultiRemoved"
+    assert rows[0]["o11_infras"] == 11
+    assert rows[0]["days_silent"] == 101
+
+
+def test_render_has_multi_o11_removal_tables(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "Connector Removal Events — Multi-O11-Infra Customers" in content
+    assert "Fully Removed O11 Connector Infrastructure — Multi-O11-Infra Customers" in content
+    assert "MultiCorp A" in content
+    assert "MultiRemoved" in content
+
+
 def test_compute_metrics_nan_arr_coerced_to_zero(sample_data):
     """Regression test: NaN/None ARR should become 0.0, not leak as nan into JSON."""
     # Build q10 directly from records so no pd.concat FutureWarning is triggered.
@@ -236,6 +324,37 @@ def test_render_has_data_interoperability_tab(sample_data, tmp_path):
     assert "switchTab('datainterop')" in content
     assert 'id="tab-datainterop"' in content
     assert "Data InterOperability" in content
+
+
+def test_render_has_o11_infra_removals_table(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "Fully Removed Their O11 Connector Infrastructure" in content
+    assert "Umbrella" in content
+    assert "Stark Ind" in content
+
+
+def test_render_has_removal_events_by_company_table(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "Connector Removal Events by Company" in content
+    assert "Wayne Enterprises" in content
+
+
+def test_render_has_sql_panels_for_table_only_sections(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    for key in ("o11_infra_removals", "removal_events_by_company", "multi_o11_with_df",
+                "removal_events_multi_o11", "o11_infra_removals_multi_o11"):
+        assert f"toggleSql('{key}')" in content
+        assert f'id="sqlcode-{key}"' in content
+        assert f"copySql('{key}')" in content
 
 
 def test_compute_metrics_interop_dev_chart(sample_data):
@@ -421,11 +540,19 @@ def test_change_heatmap_window_filter(sample_data):
 
 def test_sql_map_has_entry_per_chart(sample_data):
     metrics = compute_metrics(sample_data)
-    # every chart has a matching SQL entry
-    assert set(metrics["sql"].keys()) == set(metrics["charts"].keys())
+    # every chart has a matching SQL entry (sql may also carry extra table-only entries)
+    assert set(metrics["charts"].keys()) <= set(metrics["sql"].keys())
     # entries carry real SQL text
     assert "SELECT" in metrics["sql"]["interop_dev"].upper()
     assert "DEV_CUSTOMERS" in metrics["sql"]["interop_dev"]
+
+
+def test_sql_map_has_entry_per_table_only_section(sample_data):
+    metrics = compute_metrics(sample_data)
+    for key in ("o11_infra_removals", "removal_events_by_company", "multi_o11_with_df",
+                "removal_events_multi_o11", "o11_infra_removals_multi_o11"):
+        assert key in metrics["sql"]
+        assert "SELECT" in metrics["sql"][key].upper()
 
 
 def test_sql_map_multi_query_chart_includes_both(sample_data):

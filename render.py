@@ -26,6 +26,11 @@ def load_data(data_dir: str = "data") -> dict:
         "q16": "q16_connector_changes_by_region.parquet",
         "q17": "q17_changes_per_customer_by_region_ring.parquet",
         "q18": "q18_change_heatmap_region_weekday.parquet",
+        "q19": "q19_o11_customers_removed_infra.parquet",
+        "q20": "q20_connector_removal_events_by_company.parquet",
+        "q21": "q21_multi_o11_infra_with_df.parquet",
+        "q22": "q22_connector_removal_events_multi_o11.parquet",
+        "q23": "q23_o11_customers_removed_infra_multi_o11.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -548,12 +553,23 @@ CHART_SQL = {
     "change_heatmap": ["q18_change_heatmap_region_weekday"],
 }
 
+# Maps each table-only section (no chart) to its source query file(s), so it can still
+# get a toggleable SQL panel via the same sql_panel() macro used for charts.
+TABLE_SQL = {
+    "o11_infra_removals": ["q19_o11_customers_removed_infra"],
+    "removal_events_by_company": ["q20_connector_removal_events_by_company"],
+    "multi_o11_with_df": ["q21_multi_o11_infra_with_df"],
+    "removal_events_multi_o11": ["q22_connector_removal_events_multi_o11"],
+    "o11_infra_removals_multi_o11": ["q23_o11_customers_removed_infra_multi_o11"],
+}
+
 
 def _build_sql_map(query_dir: str = "queries") -> dict:
-    """Return {chart_key: sql_text} by reading the source .sql files. Multi-query
-    charts concatenate their queries, each prefixed with a `-- filename.sql` header."""
+    """Return {key: sql_text} for every chart and table-only section, by reading the
+    source .sql files. Multi-query charts concatenate their queries, each prefixed
+    with a `-- filename.sql` header."""
     out = {}
-    for chart, files in CHART_SQL.items():
+    for chart, files in {**CHART_SQL, **TABLE_SQL}.items():
         parts = []
         for fn in files:
             path = os.path.join(query_dir, fn + ".sql")
@@ -661,6 +677,47 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
          "deployment": r["USAGE_DEPLOYMENT_OPTION"], "activation_code": r["ACTIVATION_CODE"]}
         for _, r in data["q11"].head(20).iterrows()
     ]
+    o11_infra_removals = [
+        {"company": r["COMPANY_NAME"], "tenant_id": r["TENANT_ID"], "n_envs": int(r["N_O11_ENVS"]),
+         "peak_count": int(r["PEAK_CONNECTORS"]), "last_count": int(r["LAST_KNOWN_CONNECTORS"]),
+         "last_seen": r["LAST_CONNECTOR_TELEMETRY_DAY"].strftime("%Y-%m-%d"),
+         "days_silent": int(r["DAYS_SINCE_CONNECTOR_TELEMETRY"])}
+        for _, r in data["q19"].sort_values("DAYS_SINCE_CONNECTOR_TELEMETRY", ascending=False).iterrows()
+    ]
+    removal_events_by_company = [
+        {"company": r["COMPANY_NAME"], "removal_events": int(r["REMOVAL_EVENTS"]),
+         "connectors_removed": int(r["TOTAL_CONNECTORS_REMOVED"]),
+         "peak_connectors": int(r["PEAK_TOTAL_CONNECTORS"]),
+         "connectors_today": int(r["CONNECTORS_TODAY"])}
+        for _, r in data["q20"].sort_values(
+            ["REMOVAL_EVENTS", "TOTAL_CONNECTORS_REMOVED"], ascending=False).iterrows()
+    ]
+    multi_o11_with_df = [
+        {"company": r["COMPANY_NAME"], "o11_infras": int(r["NUM_O11_INFRAS"]),
+         "df_providers": int(r["NUM_DF_PROVIDERS"]), "df_connectors": int(r["CURRENT_DF_CONNECTORS"])}
+        for _, r in data["q21"].sort_values(
+            ["CURRENT_DF_CONNECTORS", "NUM_O11_INFRAS"], ascending=False).iterrows()
+    ]
+    # q22/q23: removal events + full removals restricted to the q21 (multi-O11-infra) population.
+    # Guarded for empty results (e.g. q22 currently has no multi-infra customers with removals).
+    q22 = data["q22"]
+    removal_events_multi_o11 = (
+        [{"company": r["COMPANY_NAME"], "o11_infras": int(r["NUM_O11_INFRAS"]),
+          "removal_events": int(r["REMOVAL_EVENTS"]), "connectors_removed": int(r["TOTAL_CONNECTORS_REMOVED"]),
+          "peak_connectors": int(r["PEAK_TOTAL_CONNECTORS"]), "connectors_today": int(r["CONNECTORS_TODAY"])}
+         for _, r in q22.sort_values(["REMOVAL_EVENTS", "TOTAL_CONNECTORS_REMOVED"], ascending=False).iterrows()]
+        if not q22.empty else []
+    )
+    q23 = data["q23"]
+    o11_infra_removals_multi_o11 = (
+        [{"company": r["COMPANY_NAME"], "tenant_id": r["TENANT_ID"], "o11_infras": int(r["NUM_O11_INFRAS"]),
+          "n_envs": int(r["N_O11_ENVS"]), "peak_count": int(r["PEAK_CONNECTORS"]),
+          "last_count": int(r["LAST_KNOWN_CONNECTORS"]),
+          "last_seen": r["LAST_CONNECTOR_TELEMETRY_DAY"].strftime("%Y-%m-%d"),
+          "days_silent": int(r["DAYS_SINCE_CONNECTOR_TELEMETRY"])}
+         for _, r in q23.sort_values("DAYS_SINCE_CONNECTOR_TELEMETRY", ascending=False).iterrows()]
+        if not q23.empty else []
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
@@ -725,6 +782,11 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "sku_gap_targeting": sku_gap_targeting,
             "infra_no_telemetry": infra_no_telemetry,
             "freeze_windows": _freeze_windows(data["q18"]),
+            "o11_infra_removals": o11_infra_removals,
+            "removal_events_by_company": removal_events_by_company,
+            "multi_o11_with_df": multi_o11_with_df,
+            "removal_events_multi_o11": removal_events_multi_o11,
+            "o11_infra_removals_multi_o11": o11_infra_removals_multi_o11,
         },
         "sql": _build_sql_map(query_dir),
     }

@@ -142,6 +142,54 @@ def sample_data():
         "EVENTS": [8, 20, 4, 10, 6, 5, 3, 5],
         "N_TENANTS": [10, 10, 2, 5, 5, 4, 8, 8],
     })
+    q19 = pd.DataFrame({
+        "COMPANY_NAME": ["Umbrella", "Stark Ind"],
+        "COMPANY_SFDC_ID": ["001D", "001E"],
+        "TENANT_ID": ["ten-1", "ten-2"],
+        "N_O11_ENVS": [1, 2],
+        "PEAK_CONNECTORS": [1, 2],
+        "LAST_KNOWN_CONNECTORS": [1, 1],
+        "LAST_CONNECTOR_TELEMETRY_DAY": pd.to_datetime(["2026-01-28", "2026-04-07"]),
+        "DAYS_SINCE_CONNECTOR_TELEMETRY": [170, 101],
+        "LAST_PLATFORM_USAGE_DAY": pd.to_datetime(["2026-06-15", "2026-06-15"]),
+    })
+    q20 = pd.DataFrame({
+        "COMPANY_NAME": ["Umbrella", "Stark Ind", "Wayne Enterprises"],
+        "COMPANY_SFDC_ID": ["001D", "001E", "001F"],
+        "REMOVAL_EVENTS": [4, 3, 3],
+        "TOTAL_CONNECTORS_REMOVED": [5, 3, 2],
+        "PEAK_TOTAL_CONNECTORS": [8, 6, 2],
+        "CONNECTORS_TODAY": [8, 3, 0],
+    })
+    q21 = pd.DataFrame({
+        "COMPANY_NAME": ["Cyberdyne", "Tyrell Corp", "Weyland"],
+        "COMPANY_SFDC_ID": ["001G", "001H", "001I"],
+        "NUM_O11_INFRAS": [2, 5, 3],
+        "NUM_DF_PROVIDERS": [1, 1, 2],
+        "CURRENT_DF_CONNECTORS": [10, 4, 4],
+    })
+    q22 = pd.DataFrame({
+        "COMPANY_NAME": ["MultiCorp A", "MultiCorp B"],
+        "COMPANY_SFDC_ID": ["001J", "001K"],
+        "NUM_O11_INFRAS": [3, 2],
+        "REMOVAL_EVENTS": [2, 1],
+        "TOTAL_CONNECTORS_REMOVED": [3, 1],
+        "PEAK_TOTAL_CONNECTORS": [10, 4],
+        "CONNECTORS_TODAY": [7, 3],
+    })
+    q23 = pd.DataFrame({
+        "COMPANY_NAME": ["MultiRemoved"],
+        "COMPANY_SFDC_ID": ["001L"],
+        "TENANT_ID": ["ten-9"],
+        "NUM_O11_INFRAS": [11],
+        "N_O11_ENVS": [1],
+        "PEAK_CONNECTORS": [1],
+        "LAST_KNOWN_CONNECTORS": [1],
+        "LAST_CONNECTOR_TELEMETRY_DAY": pd.to_datetime(["2026-04-07"]),
+        "DAYS_SINCE_CONNECTOR_TELEMETRY": [101],
+        "LAST_PLATFORM_USAGE_DAY": pd.to_datetime(["2026-06-15"]),
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
-            "q13": q13, "q14": q14, "q15": q15, "q16": q16, "q17": q17, "q18": q18}
+            "q13": q13, "q14": q14, "q15": q15, "q16": q16, "q17": q17, "q18": q18,
+            "q19": q19, "q20": q20, "q21": q21, "q22": q22, "q23": q23}

@@ -358,6 +358,133 @@
       </tbody>
     </table>
   </div>
+  <div class="section">
+    <h3>Customers Who Fully Removed Their O11 Connector Infrastructure</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      EXTERNALCONNECTIONCOUNT is a daily gauge that reports even with no change, so a >14-day
+      silence after a nonzero reading means the connector was actually removed. Aggregated to the
+      tenant level — a customer counts only if it no longer reports <em>any</em> O11 connector in
+      <em>any</em> environment (a single quiet dev env while the main connector is live does not
+      count). Restricted to tenants still active/current with recent platform usage, to exclude
+      customers who churned entirely rather than just dropping the O11 connector.
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
+      <tbody>
+        {% for r in tables.o11_infra_removals %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.tenant_id }}</td>
+          <td>{{ r.n_envs }}</td>
+          <td>{{ r.peak_count }}</td>
+          <td>{{ r.last_count }}</td>
+          <td>{{ r.last_seen }}</td>
+          <td>{{ r.days_silent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('o11_infra_removals') }}
+  </div>
+  <div class="section">
+    <h3>Connector Removal Events by Company (all-time)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Every day-over-day decrease in a tenant/environment's O11 connector count, rolled up per
+      company — partial removals included, not just full disconnects (see the table above for
+      customers who dropped O11 entirely). Peak = max simultaneous connectors the company ever
+      had; Today = current live connectors (series silent >14 days count as removed). Excludes
+      internal OutSystems tenants.
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>Removal Events</th><th>Connectors Removed</th><th>Peak Connectors</th><th>Connectors Today</th></tr></thead>
+      <tbody>
+        {% for r in tables.removal_events_by_company %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.removal_events }}</td>
+          <td>{{ r.connectors_removed }}</td>
+          <td>{{ r.peak_connectors }}</td>
+          <td>{{ r.connectors_today }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('removal_events_by_company') }}
+  </div>
+  <div class="section">
+    <h3>Customers with Multiple O11 Infrastructures Using Data Fabric</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Customers running more than one active O11 enterprise infrastructure (activation code) that
+      also have at least one live O11 Data Fabric connection. O11 Infras = distinct active
+      activation codes; DF Providers = distinct Data Fabric providers with telemetry; DF
+      Connectors = current connector count (latest reading per tenant/env/provider, summed).
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>O11 Infras</th><th>DF Providers</th><th>Current DF Connectors</th></tr></thead>
+      <tbody>
+        {% for r in tables.multi_o11_with_df %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.o11_infras }}</td>
+          <td>{{ r.df_providers }}</td>
+          <td>{{ r.df_connectors }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('multi_o11_with_df') }}
+  </div>
+  <div class="section">
+    <h3>Connector Removal Events — Multi-O11-Infra Customers (all-time)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      The "Connector Removal Events by Company" view above, restricted to the multi-O11-infra
+      population (q21). {% if not tables.removal_events_multi_o11 %}<strong>No rows:</strong> every
+      company with connector-removal events has only a single O11 infrastructure — removal activity
+      is concentrated entirely among single-infra customers.{% endif %}
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>O11 Infras</th><th>Removal Events</th><th>Connectors Removed</th><th>Peak Connectors</th><th>Connectors Today</th></tr></thead>
+      <tbody>
+        {% for r in tables.removal_events_multi_o11 %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.o11_infras }}</td>
+          <td>{{ r.removal_events }}</td>
+          <td>{{ r.connectors_removed }}</td>
+          <td>{{ r.peak_connectors }}</td>
+          <td>{{ r.connectors_today }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('removal_events_multi_o11') }}
+  </div>
+  <div class="section">
+    <h3>Fully Removed O11 Connector Infrastructure — Multi-O11-Infra Customers</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      The "Customers Who Fully Removed Their O11 Connector Infrastructure" view above, restricted
+      to the multi-O11-infra population (q21) — i.e. customers who removed their O11 Data Fabric
+      connection despite running several O11 infrastructures.
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Infras</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
+      <tbody>
+        {% for r in tables.o11_infra_removals_multi_o11 %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.tenant_id }}</td>
+          <td>{{ r.o11_infras }}</td>
+          <td>{{ r.n_envs }}</td>
+          <td>{{ r.peak_count }}</td>
+          <td>{{ r.last_count }}</td>
+          <td>{{ r.last_seen }}</td>
+          <td>{{ r.days_silent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('o11_infra_removals_multi_o11') }}
+  </div>
 </div>
 
 <script>
