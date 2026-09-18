@@ -8,9 +8,13 @@
 -- % line denominator (O11_ODC_CUSTOMERS) = monthly count of O11/ODC customers (same as q13).
 -- NOTE: active_elements uses each app's CURRENT max revision applied to all months, so historical
 --   months are approximate (they drift as apps publish new revisions).
+-- NOTE: the customer filter is POINT-IN-TIME -- is_customer_policy is evaluated for the same month
+--   the usage was observed, not from a single current snapshot, so a customer who churned still
+--   counts in the months they were a customer.
 WITH cust AS (
-  SELECT DISTINCT company_sfdc_id FROM CANONICAL.CUSTOMERSUCCESS.CUSTOMERUNIFIEDINFO
-  WHERE is_customer_policy AND is_last_month_reported
+  SELECT DISTINCT company_sfdc_id, DATE_TRUNC('month', month_dt) AS month
+  FROM CANONICAL.CUSTOMERSUCCESS.CUSTOMERUNIFIEDINFO
+  WHERE is_customer_policy
 ),
 max_rev AS (
   SELECT APPLICATIONID, TENANTID, MAX(EVENT_REVISION) AS max_revision
@@ -57,7 +61,8 @@ stage_counts AS (
     COUNT(DISTINCT CASE WHEN environment_purpose='production'  THEN m.company_sfdc_id END) AS prod_customers,
     COUNT(DISTINCT CASE WHEN environment_purpose='development' THEN m.APPLICATIONID END)   AS dev_apps,
     COUNT(DISTINCT CASE WHEN environment_purpose='production'  THEN m.APPLICATIONID END)   AS prod_apps
-  FROM mapped m INNER JOIN cust ON cust.company_sfdc_id = m.company_sfdc_id
+  FROM mapped m
+  INNER JOIN cust ON cust.company_sfdc_id = m.company_sfdc_id AND cust.month = m.month
   GROUP BY 1
 ),
 o11_odc AS (

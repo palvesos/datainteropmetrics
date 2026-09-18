@@ -89,7 +89,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "executions_bar", "ao_usage_line",
         "product_family_bar", "arch_type_bar",
         "data_fabric_trend", "data_fabric_providers", "deployment_option_bar",
-        "interop_dev", "interop_prod",
+        "interop_dev", "interop_nonprod", "interop_prod",
         "interop_apps_dev", "interop_apps_prod",
         "connector_changes_monthly", "connector_changes_dow",
         "connector_changes_by_region",
@@ -369,6 +369,13 @@ def test_compute_metrics_interop_dev_chart(sample_data):
     assert line["y"][0] == pytest.approx(round(86 / 714 * 100, 1))
 
 
+def test_compute_metrics_interop_nonprod_chart(sample_data):
+    metrics = compute_metrics(sample_data)
+    chart = metrics["charts"]["interop_nonprod"]
+    assert chart["data"][0]["y"] == [81, 99, 118, 141]
+    assert chart["data"][1]["y"][-1] == pytest.approx(round(141 / 785 * 100, 1))
+
+
 def test_compute_metrics_interop_prod_chart(sample_data):
     metrics = compute_metrics(sample_data)
     chart = metrics["charts"]["interop_prod"]
@@ -381,7 +388,7 @@ def test_render_has_interop_charts(sample_data, tmp_path):
     output = str(tmp_path / "report.html")
     render(metrics, output_path=output)
     content = open(output).read()
-    for cid in ("chart-interop-dev", "chart-interop-prod",
+    for cid in ("chart-interop-dev", "chart-interop-nonprod", "chart-interop-prod",
                 "chart-interop-apps-dev", "chart-interop-apps-prod"):
         assert f"'{cid}'" in content and f'id="{cid}"' in content
 

@@ -92,6 +92,7 @@ def sample_data():
     q13 = pd.DataFrame({
         "MONTH": pd.to_datetime(["2026-06-01", "2026-05-01", "2026-04-01", "2026-03-01"]),
         "DEV_CUSTOMERS": [153, 133, 110, 86],
+        "NONPROD_CUSTOMERS": [141, 118, 99, 81],
         "PROD_CUSTOMERS": [119, 97, 78, 63],
         "O11_ODC_CUSTOMERS": [785, 756, 739, 714],
     })
