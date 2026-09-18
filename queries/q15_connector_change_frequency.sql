@@ -5,15 +5,24 @@
 --   RECONFIGURE = day where an existing connection's selected entities/actions COUNT changed
 --                 vs prior day, from EXTERNALCONNECTIONELEMENTSUSAGECOUNT (misses same-count swaps).
 -- Covers all O11 connector tenants (not filtered to paying customers).
--- NOTE: snapshot fires ~00:00 UTC, so day-of-week is UTC and ~1 day after the actual edit.
+-- NOTE: both halves are keyed on the day the telemetry DESCRIBES, so the weekday is the day the
+--   edit actually happened (UTC). ADD_REMOVE uses metric_day (YEAR + DATE_VALUE day-of-year);
+--   RECONFIGURE uses event_metricdate. Both equal their delivery timestamp minus one day, so the
+--   two series are on the same basis -- keying ADD_REMOVE on event_sent shifted it a day later
+--   than RECONFIGURE and mislabelled its day-of-week.
 WITH cnt_daily AS (
   SELECT tenant, environment_id, event_provider,
-         TRY_TO_TIMESTAMP(event_sent)::date AS d, metric_value AS mv
+         DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1)) AS d, metric_value AS mv
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT
   WHERE event_provider ILIKE 'o11%'
-    AND TRY_TO_TIMESTAMP(event_sent) >= DATEADD('month', -12, CURRENT_DATE)
+    -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+    -- of the same gauge, which would otherwise win the QUALIFY race and distort the LAG diff
+    AND type = 'D'
+    AND DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1))
+        >= DATEADD('month', -12, CURRENT_DATE)
   QUALIFY ROW_NUMBER() OVER (PARTITION BY tenant, environment_id, event_provider,
-    TRY_TO_TIMESTAMP(event_sent)::date ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
+    DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
 ),
 add_remove AS (
   SELECT d, COUNT(*) AS n FROM (

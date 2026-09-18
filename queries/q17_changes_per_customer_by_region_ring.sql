@@ -22,16 +22,21 @@ infra_dim AS (
 ),
 cnt_daily AS (
   SELECT ext.tenant, ext.environment_id, ext.event_provider,
-         TRY_TO_TIMESTAMP(ext.event_sent)::date AS d, ext.metric_value AS mv,
+         DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1)) AS d,
+         ext.metric_value AS mv,
          ed.region, rt.ring
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT ext
   JOIN ring_tenants rt ON rt.tenant_id = ext.tenant
   JOIN infra_dim i ON i.tenant_id = ext.tenant
   JOIN env_dim ed ON ed.stage_id = ext.environment_id AND ed.activation_code = i.activation_code
   WHERE ext.event_provider ILIKE 'o11%'
-    AND TRY_TO_TIMESTAMP(ext.event_sent) >= DATEADD('month',-12,CURRENT_DATE)
+    -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+    AND ext.type = 'D'
+    AND DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1))
+        >= DATEADD('month',-12,CURRENT_DATE)
   QUALIFY ROW_NUMBER() OVER (PARTITION BY ext.tenant, ext.environment_id, ext.event_provider,
-    TRY_TO_TIMESTAMP(ext.event_sent)::date ORDER BY TRY_TO_TIMESTAMP(ext.event_sent) DESC)=1
+    DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(ext.event_sent) DESC)=1
 ),
 add_remove AS (
   SELECT tenant, COALESCE(region,'Unknown') AS region, ring, COUNT(*) AS changes FROM (

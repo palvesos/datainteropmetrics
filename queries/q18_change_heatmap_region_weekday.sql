@@ -4,7 +4,9 @@
 -- (all = last 12 months). N_TENANTS is recomputed PER WINDOW (distinct tenants with O11 connectors
 -- in that region x ring within the window) so "avg changes per tenant" = EVENTS / N_TENANTS is
 -- correct for each window. Powers the Region x Weekday heatmap with time-range + ring + change-type
--- dropdowns. NULL region -> 'Unknown'. WEEKDAY is UTC snapshot-day (~1 day after the actual edit).
+-- dropdowns. NULL region -> 'Unknown'. WEEKDAY is the UTC day the change actually happened: both
+-- halves key on the day the telemetry DESCRIBES (add_remove = YEAR + DATE_VALUE day-of-year,
+-- reconfigure = event_metricdate), not the delivery day, which ran one day later.
 WITH env_dim AS (
   SELECT activation_code, stage_id, MAX(aws_region_name) AS region
   FROM CANONICAL.CUSTOMERSUCCESS.ENVIRONMENT
@@ -21,16 +23,21 @@ infra_dim AS (
 ),
 cnt_daily AS (
   SELECT ext.tenant, ext.environment_id, ext.event_provider,
-         TRY_TO_TIMESTAMP(ext.event_sent)::date AS d, ext.metric_value AS mv,
+         DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1)) AS d,
+         ext.metric_value AS mv,
          COALESCE(ed.region,'Unknown') AS region, rt.ring
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT ext
   JOIN ring_tenants rt ON rt.tenant_id = ext.tenant
   JOIN infra_dim i ON i.tenant_id = ext.tenant
   JOIN env_dim ed ON ed.stage_id = ext.environment_id AND ed.activation_code = i.activation_code
   WHERE ext.event_provider ILIKE 'o11%'
-    AND TRY_TO_TIMESTAMP(ext.event_sent) >= DATEADD('month',-12,CURRENT_DATE)
+    -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+    AND ext.type = 'D'
+    AND DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1))
+        >= DATEADD('month',-12,CURRENT_DATE)
   QUALIFY ROW_NUMBER() OVER (PARTITION BY ext.tenant, ext.environment_id, ext.event_provider,
-    TRY_TO_TIMESTAMP(ext.event_sent)::date ORDER BY TRY_TO_TIMESTAMP(ext.event_sent) DESC)=1
+    DATEADD('day', ext.date_value - 1, DATE_FROM_PARTS(ext.year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(ext.event_sent) DESC)=1
 ),
 elem_daily AS (
   SELECT u.tenantid, u.event_connectionid AS cid, TRY_TO_DATE(u.event_metricdate) AS d,

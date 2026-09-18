@@ -12,11 +12,14 @@
 --                           silent longer is treated as removed -> 0).
 WITH cnt_daily AS (
   SELECT tenant, environment_id, event_provider,
-         TRY_TO_TIMESTAMP(event_sent)::date AS d, metric_value AS mv
+         DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1)) AS d, metric_value AS mv
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT
   WHERE event_provider ILIKE 'o11%'
+    -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+    AND type = 'D'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY tenant, environment_id, event_provider,
-    TRY_TO_TIMESTAMP(event_sent)::date ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
+    DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
 ),
 tm AS (
   SELECT tenant_id, MAX(company_name) AS company_name, MAX(company_sfdc_id) AS company_sfdc_id

@@ -6,11 +6,14 @@
 -- Excludes internal OutSystems tenants.
 WITH cnt_daily AS (
   SELECT tenant, environment_id, event_provider,
-         TRY_TO_TIMESTAMP(event_sent)::date AS d, metric_value AS mv
+         DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1)) AS d, metric_value AS mv
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT
   WHERE event_provider ILIKE 'o11%'
+    -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+    AND type = 'D'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY tenant, environment_id, event_provider,
-    TRY_TO_TIMESTAMP(event_sent)::date ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
+    DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
 ),
 daily_tenant_total AS (
   SELECT tenant, d, SUM(mv) AS total_mv FROM cnt_daily GROUP BY tenant, d
@@ -67,6 +70,7 @@ o11_conn_series AS (
     AND e.activation_code = odc.activation_code
     AND e.is_current AND e.is_active
     AND m.event_provider ILIKE 'o11%'
+    AND m.type = 'D'
 ),
 df_companies AS (SELECT DISTINCT company_sfdc_id FROM o11_conn_series),
 multiple_o11 AS (

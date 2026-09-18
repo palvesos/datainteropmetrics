@@ -10,7 +10,7 @@ WITH o11_conn_series AS (
     SELECT
         odc.company_sfdc_id,
         m.tenant, m.environment_id, m.event_provider,
-        TRY_TO_TIMESTAMP(m.event_sent)::date AS d,
+        DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1)) AS d,
         m.metric_value AS mv
     FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT AS m
     INNER JOIN canonical.customersuccess.infrastructure AS odc ON odc.tenant_id = m.TENANT
@@ -19,8 +19,11 @@ WITH o11_conn_series AS (
       AND e.activation_code = odc.activation_code
       AND e.is_current AND e.is_active
       AND m.event_provider ILIKE 'o11%'
+      -- daily-grain rows only; the table also carries W (ISO week) / M (month) re-emissions
+      AND m.type = 'D'
     QUALIFY ROW_NUMBER() OVER (PARTITION BY m.tenant, m.environment_id, m.event_provider,
-        TRY_TO_TIMESTAMP(m.event_sent)::date ORDER BY TRY_TO_TIMESTAMP(m.event_sent) DESC) = 1
+        DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1))
+        ORDER BY TRY_TO_TIMESTAMP(m.event_sent) DESC) = 1
 ),
 df_latest AS (
     -- latest reading per (tenant, env, provider) series

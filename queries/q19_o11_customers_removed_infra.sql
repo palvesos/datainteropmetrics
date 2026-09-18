@@ -19,11 +19,15 @@
 -- Excludes internal/demo OutSystems tenants.
 WITH cnt_daily AS (
   SELECT tenant, environment_id, event_provider,
-         TRY_TO_TIMESTAMP(event_sent)::date AS d, metric_value AS mv
+         DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1)) AS d, metric_value AS mv
   FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT
   WHERE event_provider ILIKE 'o11%'
+    -- daily-grain rows only; the W (ISO week) / M (month) re-emissions are the "~twice daily"
+    -- duplicates noted above and would otherwise win the QUALIFY race on event_sent
+    AND type = 'D'
   QUALIFY ROW_NUMBER() OVER (PARTITION BY tenant, environment_id, event_provider,
-    TRY_TO_TIMESTAMP(event_sent)::date ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
+    DATEADD('day', date_value - 1, DATE_FROM_PARTS(year, 1, 1))
+    ORDER BY TRY_TO_TIMESTAMP(event_sent) DESC) = 1
 ),
 daily_tenant_total AS (
   SELECT tenant, d, SUM(mv) AS total_mv
