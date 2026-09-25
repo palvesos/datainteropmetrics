@@ -90,7 +90,7 @@ def test_compute_metrics_has_all_charts(sample_data):
         "product_family_bar", "arch_type_bar",
         "data_fabric_trend", "data_fabric_providers", "deployment_option_bar",
         "interop_dev", "interop_nonprod", "interop_prod",
-        "interop_apps_dev", "interop_apps_prod",
+        "interop_apps_dev", "interop_apps_nonprod", "interop_apps_prod",
         "connector_changes_monthly", "connector_changes_dow",
         "connector_changes_by_region",
         "changes_per_tenant_combo",
@@ -389,18 +389,22 @@ def test_render_has_interop_charts(sample_data, tmp_path):
     render(metrics, output_path=output)
     content = open(output).read()
     for cid in ("chart-interop-dev", "chart-interop-nonprod", "chart-interop-prod",
-                "chart-interop-apps-dev", "chart-interop-apps-prod"):
+                "chart-interop-apps-dev", "chart-interop-apps-nonprod",
+                "chart-interop-apps-prod"):
         assert f"'{cid}'" in content and f'id="{cid}"' in content
 
 
 def test_compute_metrics_interop_apps_prod_chart(sample_data):
     metrics = compute_metrics(sample_data)
     chart = metrics["charts"]["interop_apps_prod"]
-    cust_bar, apps_bar, line = chart["data"][0], chart["data"][1], chart["data"][2]
+    cust_bar, apps_bar, agents_bar, line = (
+        chart["data"][0], chart["data"][1], chart["data"][2], chart["data"][3])
     # months ascending -> Mar, Apr, May, Jun
     assert cust_bar["type"] == "bar" and apps_bar["type"] == "bar"
     assert cust_bar["y"] == [23, 27, 34, 36]
     assert apps_bar["y"] == [23, 28, 36, 38]
+    assert agents_bar["type"] == "bar"
+    assert agents_bar["y"] == [4, 6, 8, 9]
     # % line uses customers / monthly O11+ODC base
     assert line["y"][-1] == pytest.approx(round(36 / 785 * 100, 1))
 
@@ -410,6 +414,28 @@ def test_compute_metrics_interop_apps_dev_chart(sample_data):
     chart = metrics["charts"]["interop_apps_dev"]
     assert chart["data"][0]["y"] == [57, 83, 94, 109]
     assert chart["data"][1]["y"] == [62, 94, 112, 125]
+    assert chart["data"][2]["y"] == [12, 19, 24, 30]
+
+
+def test_interop_apps_agents_are_a_separate_series(sample_data):
+    """Agents are reported alongside apps, not folded into the app count."""
+    chart = compute_metrics(sample_data)["charts"]["interop_apps_dev"]
+    names = [t["name"] for t in chart["data"]]
+    assert sum("Agent" in n for n in names) == 1
+    agents = next(t for t in chart["data"] if "Agent" in t["name"])
+    apps = chart["data"][1]
+    assert agents["y"] != apps["y"]
+
+
+def test_compute_metrics_interop_apps_nonprod_chart(sample_data):
+    metrics = compute_metrics(sample_data)
+    chart = metrics["charts"]["interop_apps_nonprod"]
+    cust_bar, apps_bar, agents_bar, line = (
+        chart["data"][0], chart["data"][1], chart["data"][2], chart["data"][3])
+    assert cust_bar["y"] == [29, 36, 46, 54]
+    assert apps_bar["y"] == [59, 78, 100, 114]
+    assert agents_bar["y"] == [9, 14, 18, 22]
+    assert line["y"][-1] == pytest.approx(round(54 / 785 * 100, 1))
 
 
 def test_compute_metrics_connector_changes_monthly(sample_data):

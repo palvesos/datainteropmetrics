@@ -288,8 +288,9 @@
     <div class="section"><h3>Customers with Data Fabric Connections for O11 — Non-Production</h3><div id="chart-interop-nonprod" class="chart-container tall"></div>{{ sql_panel('interop_nonprod') }}</div>
     <div class="section"><h3>Customers with Data Fabric Connections for O11 — Production</h3><div id="chart-interop-prod" class="chart-container tall"></div>{{ sql_panel('interop_prod') }}</div>
   </div>
-  <div class="chart-row">
+  <div class="chart-row chart-row-3">
     <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Development</h3><div id="chart-interop-apps-dev" class="chart-container tall"></div>{{ sql_panel('interop_apps_dev') }}</div>
+    <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Non-Production</h3><div id="chart-interop-apps-nonprod" class="chart-container tall"></div>{{ sql_panel('interop_apps_nonprod') }}</div>
     <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div>{{ sql_panel('interop_apps_prod') }}</div>
   </div>
   <div class="chart-row">
@@ -504,6 +505,7 @@
     interop_nonprod: {{ charts.interop_nonprod | tojson }},
     interop_prod: {{ charts.interop_prod | tojson }},
     interop_apps_dev:  {{ charts.interop_apps_dev | tojson }},
+    interop_apps_nonprod: {{ charts.interop_apps_nonprod | tojson }},
     interop_apps_prod: {{ charts.interop_apps_prod | tojson }},
     connector_changes_monthly: {{ charts.connector_changes_monthly | tojson }},
     connector_changes_dow:     {{ charts.connector_changes_dow | tojson }},
@@ -528,6 +530,7 @@
   Plotly.newPlot('chart-interop-nonprod', charts.interop_nonprod.data, charts.interop_nonprod.layout, cfg);
   Plotly.newPlot('chart-interop-prod',  charts.interop_prod.data,  charts.interop_prod.layout,  cfg);
   Plotly.newPlot('chart-interop-apps-dev',  charts.interop_apps_dev.data,  charts.interop_apps_dev.layout,  cfg);
+  Plotly.newPlot('chart-interop-apps-nonprod', charts.interop_apps_nonprod.data, charts.interop_apps_nonprod.layout, cfg);
   Plotly.newPlot('chart-interop-apps-prod', charts.interop_apps_prod.data, charts.interop_apps_prod.layout, cfg);
   Plotly.newPlot('chart-connector-changes-monthly', charts.connector_changes_monthly.data, charts.connector_changes_monthly.layout, cfg);
   Plotly.newPlot('chart-connector-changes-dow',     charts.connector_changes_dow.data,     charts.connector_changes_dow.layout,     cfg);

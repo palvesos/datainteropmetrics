@@ -207,13 +207,16 @@ def _chart_interop_customers(df: pd.DataFrame, count_col: str, bar_color: str) -
     }
 
 
-def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str) -> dict:
-    """Grouped bars (customers + apps whose apps use an O11 data connection in a stage)
-    plus a dashed line = customers as a % of the monthly O11+ODC customer base."""
+def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str,
+                             agents_col: str) -> dict:
+    """Grouped bars (customers + apps + agents consuming an O11 data connection in a stage)
+    plus a dashed line = customers as a % of the monthly O11+ODC customer base.
+    Apps and agents are disjoint: an AI Agent is never counted in the app bar."""
     df = df.sort_values("MONTH")
     months = df["MONTH"].dt.strftime("%Y-%m").tolist()
     custs = [int(c) for c in df[cust_col].tolist()]
     apps = [int(a) for a in df[apps_col].tolist()]
+    agents = [int(a) for a in df[agents_col].tolist()]
     denom = df["O11_ODC_CUSTOMERS"].tolist()
     pct = [round(c / d * 100, 1) if d else 0.0 for c, d in zip(custs, denom)]
     return {
@@ -222,6 +225,8 @@ def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str) -> 
              "marker": {"color": "#60a5fa"}, "yaxis": "y", "text": custs, "textposition": "auto"},
             {"x": months, "y": apps, "type": "bar", "name": "# Apps w/ Data Connections",
              "marker": {"color": "#64748b"}, "yaxis": "y", "text": apps, "textposition": "auto"},
+            {"x": months, "y": agents, "type": "bar", "name": "# Agents w/ Data Connections",
+             "marker": {"color": "#34d399"}, "yaxis": "y", "text": agents, "textposition": "auto"},
             {"x": months, "y": pct, "type": "scatter", "mode": "lines+markers+text",
              "name": "% Customers have O11 and ODC",
              "text": [f"{p}%" for p in pct], "textposition": "top center",
@@ -230,7 +235,7 @@ def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str) -> 
         "layout": {
             "barmode": "group",
             "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
-            "yaxis": {"title": "Customers / Apps", "gridcolor": "#334155"},
+            "yaxis": {"title": "Customers / Apps / Agents", "gridcolor": "#334155"},
             "yaxis2": {"title": "% O11 + ODC", "overlaying": "y", "side": "right",
                        "gridcolor": "#334155", "ticksuffix": "%"},
             "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
@@ -546,6 +551,7 @@ CHART_SQL = {
     "interop_nonprod": ["q13_data_interop_customers"],
     "interop_prod": ["q13_data_interop_customers"],
     "interop_apps_dev": ["q14_data_interop_app_usage"],
+    "interop_apps_nonprod": ["q14_data_interop_app_usage"],
     "interop_apps_prod": ["q14_data_interop_app_usage"],
     "connector_changes_monthly": ["q15_connector_change_frequency"],
     "connector_changes_dow": ["q15_connector_change_frequency"],
@@ -771,8 +777,12 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "interop_dev": _chart_interop_customers(data["q13"], "DEV_CUSTOMERS", "#60a5fa"),
             "interop_nonprod": _chart_interop_customers(data["q13"], "NONPROD_CUSTOMERS", "#a78bfa"),
             "interop_prod": _chart_interop_customers(data["q13"], "PROD_CUSTOMERS", "#64748b"),
-            "interop_apps_dev": _chart_interop_app_usage(data["q14"], "DEV_CUSTOMERS", "DEV_APPS"),
-            "interop_apps_prod": _chart_interop_app_usage(data["q14"], "PROD_CUSTOMERS", "PROD_APPS"),
+            "interop_apps_dev": _chart_interop_app_usage(
+                data["q14"], "DEV_CUSTOMERS", "DEV_APPS", "DEV_AGENTS"),
+            "interop_apps_nonprod": _chart_interop_app_usage(
+                data["q14"], "NONPROD_CUSTOMERS", "NONPROD_APPS", "NONPROD_AGENTS"),
+            "interop_apps_prod": _chart_interop_app_usage(
+                data["q14"], "PROD_CUSTOMERS", "PROD_APPS", "PROD_AGENTS"),
             "connector_changes_monthly": _chart_connector_changes_monthly(data["q15"]),
             "connector_changes_dow": _chart_connector_changes_dow(data["q15"]),
             "connector_changes_by_region": _build_region_variants(data["q16"]),
