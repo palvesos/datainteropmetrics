@@ -326,6 +326,44 @@ def test_render_has_data_interoperability_tab(sample_data, tmp_path):
     assert "Data InterOperability" in content
 
 
+def _tab_slice(content: str, tab_id: str) -> str:
+    """The HTML belonging to one tab: from its opening div to the next tab's."""
+    start = content.index(f'id="tab-{tab_id}"')
+    nxt = content.find('<div id="tab-', start + 1)
+    return content[start:nxt if nxt != -1 else len(content)]
+
+
+def test_render_has_connector_changes_tab(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    assert "switchTab('connectorchanges')" in content
+    assert 'id="tab-connectorchanges"' in content
+    assert (">Data InterOperability - UI Telemetry</button>") in content
+
+
+def test_connector_change_charts_live_on_their_own_tab(sample_data, tmp_path):
+    """The q15-q18 change-frequency views moved off the Data InterOperability tab."""
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    changes = _tab_slice(content, "connectorchanges")
+    interop = _tab_slice(content, "datainterop")
+    for cid in ("chart-connector-changes-monthly", "chart-connector-changes-dow",
+                "chart-connector-changes-by-region", "chart-changes-per-tenant",
+                "chart-change-heatmap"):
+        assert f'id="{cid}"' in changes, f"{cid} missing from Connector Changes tab"
+        assert f'id="{cid}"' not in interop, f"{cid} still on Data InterOperability tab"
+    # the freeze-window table is derived from the same q18 data and moves with it
+    assert "Recommended Connector Freeze Window" in changes
+    assert "Recommended Connector Freeze Window" not in interop
+    # the interop customer/app charts stay put
+    for cid in ("chart-interop-dev", "chart-interop-apps-dev"):
+        assert f'id="{cid}"' in interop
+
+
 def test_render_has_o11_infra_removals_table(sample_data, tmp_path):
     metrics = compute_metrics(sample_data)
     output = str(tmp_path / "report.html")

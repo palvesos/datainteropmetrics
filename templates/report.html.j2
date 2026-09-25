@@ -82,6 +82,7 @@
   <button class="tab-btn" onclick="switchTab('datafabric')">Data Fabric</button>
   <button class="tab-btn" onclick="switchTab('targeting')">Targeting</button>
   <button class="tab-btn" onclick="switchTab('datainterop')">Data InterOperability</button>
+  <button class="tab-btn" onclick="switchTab('connectorchanges')">Data InterOperability - UI Telemetry</button>
 </nav>
 
 <!-- OVERVIEW -->
@@ -293,74 +294,6 @@
     <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Non-Production</h3><div id="chart-interop-apps-nonprod" class="chart-container tall"></div>{{ sql_panel('interop_apps_nonprod') }}</div>
     <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div>{{ sql_panel('interop_apps_prod') }}</div>
   </div>
-  <div class="chart-row">
-    <div class="section"><h3>Connector Changes per Month (add/remove + reconfigure)</h3><div id="chart-connector-changes-monthly" class="chart-container tall"></div>{{ sql_panel('connector_changes_monthly') }}</div>
-    <div class="section"><h3>Connector Changes by Day of Week (12 mo., UTC)</h3><div id="chart-connector-changes-dow" class="chart-container tall"></div>{{ sql_panel('connector_changes_dow') }}</div>
-  </div>
-  <div class="section">
-    <h3>Connector Changes by Cloud Region — ga+ea rings</h3>
-    <div class="filter-bar">
-      <label>Month <select id="region-month" onchange="renderRegionChart()"></select></label>
-    </div>
-    <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
-    {{ sql_panel('connector_changes_by_region') }}
-  </div>
-  <div class="section">
-    <h3>Connector Add/Removes per Tenant by Region × Ring — Avg (bars) &amp; Median (line), 12 mo.</h3>
-    <div id="chart-changes-per-tenant" class="chart-container tall"></div>
-    {{ sql_panel('changes_per_tenant_combo') }}
-  </div>
-  <div class="section">
-    <h3>Avg Connector Changes per Tenant — Region × Weekday (12 mo., UTC)</h3>
-    <div class="filter-bar">
-      <label>Time range
-        <select id="heatmap-window" onchange="renderHeatmap()">
-          <option value="all">All time (12 mo.)</option>
-          <option value="6m">Last 6 months</option>
-          <option value="3m">Last 3 months</option>
-          <option value="1m">Last month</option>
-        </select>
-      </label>
-      <label>Ring
-        <select id="heatmap-ring" onchange="renderHeatmap()">
-          <option value="all">All (ga+ea)</option>
-          <option value="ga">ga</option>
-          <option value="ea">ea</option>
-        </select>
-      </label>
-      <label>Change type
-        <select id="heatmap-type" onchange="renderHeatmap()">
-          <option value="both">Add/Remove + Reconfigure</option>
-          <option value="add_remove">Add/Remove</option>
-          <option value="reconfigure">Reconfigure</option>
-        </select>
-      </label>
-    </div>
-    <div id="chart-change-heatmap" class="chart-container tall"></div>
-    {{ sql_panel('change_heatmap') }}
-  </div>
-  <div class="section">
-    <h3>Recommended Connector Freeze Window by Region (weekday-level, all-time)</h3>
-    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      Weekday with the lowest avg connector changes per tenant. Time-of-day isn't captured
-      (daily UTC snapshots, ~1-day lag), so this is weekday-level — weekends are quietest everywhere.
-      Values in parentheses are avg changes/tenant. Regions with ≥3 tenants.
-    </p>
-    <table>
-      <thead><tr><th>Region</th><th>Tenants</th><th>Best freeze day</th><th>Quietest weekday (Mon–Fri)</th><th>Busiest — avoid</th></tr></thead>
-      <tbody>
-        {% for r in tables.freeze_windows %}
-        <tr>
-          <td>{{ r.region }}</td>
-          <td>{{ r.tenants }}</td>
-          <td>{{ r.quietest_day }} ({{ r.quietest_avg }})</td>
-          <td>{{ r.quietest_biz_day }} ({{ r.quietest_biz_avg }})</td>
-          <td>{{ r.busiest_day }} ({{ r.busiest_avg }})</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
   <div class="section">
     <h3>Customers Who Fully Removed Their O11 Connector Infrastructure</h3>
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">
@@ -489,6 +422,78 @@
     {{ sql_panel('o11_infra_removals_multi_o11') }}
   </div>
 </div>
+
+<div id="tab-connectorchanges" class="tab-content">
+  <div class="chart-row">
+    <div class="section"><h3>Connector Changes per Month (add/remove + reconfigure)</h3><div id="chart-connector-changes-monthly" class="chart-container tall"></div>{{ sql_panel('connector_changes_monthly') }}</div>
+    <div class="section"><h3>Connector Changes by Day of Week (12 mo., UTC)</h3><div id="chart-connector-changes-dow" class="chart-container tall"></div>{{ sql_panel('connector_changes_dow') }}</div>
+  </div>
+  <div class="section">
+    <h3>Connector Changes by Cloud Region — ga+ea rings</h3>
+    <div class="filter-bar">
+      <label>Month <select id="region-month" onchange="renderRegionChart()"></select></label>
+    </div>
+    <div id="chart-connector-changes-by-region" class="chart-container tall"></div>
+    {{ sql_panel('connector_changes_by_region') }}
+  </div>
+  <div class="section">
+    <h3>Connector Add/Removes per Tenant by Region × Ring — Avg (bars) &amp; Median (line), 12 mo.</h3>
+    <div id="chart-changes-per-tenant" class="chart-container tall"></div>
+    {{ sql_panel('changes_per_tenant_combo') }}
+  </div>
+  <div class="section">
+    <h3>Avg Connector Changes per Tenant — Region × Weekday (12 mo., UTC)</h3>
+    <div class="filter-bar">
+      <label>Time range
+        <select id="heatmap-window" onchange="renderHeatmap()">
+          <option value="all">All time (12 mo.)</option>
+          <option value="6m">Last 6 months</option>
+          <option value="3m">Last 3 months</option>
+          <option value="1m">Last month</option>
+        </select>
+      </label>
+      <label>Ring
+        <select id="heatmap-ring" onchange="renderHeatmap()">
+          <option value="all">All (ga+ea)</option>
+          <option value="ga">ga</option>
+          <option value="ea">ea</option>
+        </select>
+      </label>
+      <label>Change type
+        <select id="heatmap-type" onchange="renderHeatmap()">
+          <option value="both">Add/Remove + Reconfigure</option>
+          <option value="add_remove">Add/Remove</option>
+          <option value="reconfigure">Reconfigure</option>
+        </select>
+      </label>
+    </div>
+    <div id="chart-change-heatmap" class="chart-container tall"></div>
+    {{ sql_panel('change_heatmap') }}
+  </div>
+  <div class="section">
+    <h3>Recommended Connector Freeze Window by Region (weekday-level, all-time)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Weekday with the lowest avg connector changes per tenant. Time-of-day isn't captured
+      (daily UTC snapshots, ~1-day lag), so this is weekday-level — weekends are quietest everywhere.
+      Values in parentheses are avg changes/tenant. Regions with ≥3 tenants.
+    </p>
+    <table>
+      <thead><tr><th>Region</th><th>Tenants</th><th>Best freeze day</th><th>Quietest weekday (Mon–Fri)</th><th>Busiest — avoid</th></tr></thead>
+      <tbody>
+        {% for r in tables.freeze_windows %}
+        <tr>
+          <td>{{ r.region }}</td>
+          <td>{{ r.tenants }}</td>
+          <td>{{ r.quietest_day }} ({{ r.quietest_avg }})</td>
+          <td>{{ r.quietest_biz_day }} ({{ r.quietest_biz_avg }})</td>
+          <td>{{ r.busiest_day }} ({{ r.busiest_avg }})</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 
 <script>
   var charts = {
