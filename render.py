@@ -31,6 +31,16 @@ def load_data(data_dir: str = "data") -> dict:
         "q21": "q21_multi_o11_infra_with_df.parquet",
         "q22": "q22_connector_removal_events_multi_o11.parquet",
         "q23": "q23_o11_customers_removed_infra_multi_o11.parquet",
+        "q26": "q26_t1a_multipipeline_tam_monthly.parquet",
+        "q27": "q27_t1b_multipipeline_reach.parquet",
+        "q28": "q28_t1c_multipipeline_validated.parquet",
+        "q29": "q29_t1d_multipipeline_depth.parquet",
+        "q30": "q30_t2a_multiinfra_tam_monthly.parquet",
+        "q31": "q31_t2b_multiinfra_reach.parquet",
+        "q32": "q32_t2c_multiinfra_validated.parquet",
+        "q33": "q33_t2d_multiinfra_depth.parquet",
+        "q34": "q34_t2c_multiinfra_validated_unification.parquet",
+        "q35": "q35_t2d_multiinfra_depth_unification.parquet",
     }
     result = {}
     for key, filename in file_map.items():
@@ -240,6 +250,95 @@ def _chart_interop_app_usage(df: pd.DataFrame, cust_col: str, apps_col: str,
                        "gridcolor": "#334155", "ticksuffix": "%"},
             "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
             "margin": {"t": 20, "b": 50, "l": 60, "r": 60}, "autosize": True,
+        },
+    }
+
+
+def _chart_funnel_stage(df: pd.DataFrame, count_col: str, denom_col: str,
+                         count_label: str, pct_label: str, bar_color: str) -> dict:
+    """Combo chart for a single Success Metrics funnel stage: bar = customer count at this
+    stage, dashed line = that count as a % of the PRIOR stage's count (the funnel denominator
+    passed in as denom_col), monthly. Same shape as _chart_interop_customers, generalized so
+    the denominator isn't hardcoded to the O11+ODC base -- each funnel stage's % is relative to
+    the stage before it (TAM -> Reach -> Validated), not the whole customer base."""
+    df = df.sort_values("MONTH")
+    months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+    counts = [int(c) if pd.notna(c) else 0 for c in df[count_col].tolist()]
+    denom = df[denom_col].tolist()
+    pct = [round(c / d * 100, 1) if d else 0.0 for c, d in zip(counts, denom)]
+    return {
+        "data": [
+            {"x": months, "y": counts, "type": "bar", "name": count_label,
+             "marker": {"color": bar_color}, "yaxis": "y",
+             "text": counts, "textposition": "auto"},
+            {"x": months, "y": pct, "type": "scatter", "mode": "lines+markers+text",
+             "name": pct_label,
+             "text": [f"{p}%" for p in pct], "textposition": "top center",
+             "line": {"color": "#94a3b8", "width": 2, "dash": "dash"}, "yaxis": "y2"},
+        ],
+        "layout": {
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "yaxis": {"title": "Customers", "gridcolor": "#334155"},
+            "yaxis2": {"title": pct_label, "overlaying": "y", "side": "right",
+                       "gridcolor": "#334155", "ticksuffix": "%"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 50, "l": 60, "r": 60}, "autosize": True,
+        },
+    }
+
+
+def _chart_infra_breakdown(df: pd.DataFrame) -> dict:
+    """Stacked bar: Reach customers split by # distinct O11 activation codes they connect to
+    (or handshake with) that month -- 1, 2+, or Unresolved (connected/handshook but the target
+    O11 code can't be attributed). Replaces a single 'validated' count with the full breakdown."""
+    df = df.sort_values("MONTH")
+    months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+
+    def col(name):
+        return [int(v) if pd.notna(v) else 0 for v in df[name].tolist()]
+
+    return {
+        "data": [
+            {"x": months, "y": col("ONE_INFRA_CUSTOMERS"), "type": "bar",
+             "name": "1 O11 infra", "marker": {"color": "#60a5fa"}},
+            {"x": months, "y": col("MULTI_INFRA_CUSTOMERS"), "type": "bar",
+             "name": "2+ O11 infras", "marker": {"color": "#34d399"}},
+            {"x": months, "y": col("UNRESOLVED_CUSTOMERS"), "type": "bar",
+             "name": "Unresolved", "marker": {"color": "#64748b"}},
+        ],
+        "layout": {
+            "barmode": "stack",
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "xaxis": {"gridcolor": "#334155"},
+            "yaxis": {"title": "Reach customers", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b", "orientation": "h", "y": 1.12},
+            "margin": {"t": 20, "b": 50, "l": 60, "r": 20}, "autosize": True,
+        },
+    }
+
+
+def _chart_depth_trend(df: pd.DataFrame) -> dict:
+    """3-line monthly trend: avg entities imported per O11 Data Fabric connection, dev / non-prod
+    / prod. Handles an empty (0-row) input cleanly -- e.g. Task 2(d) has no validated cohort."""
+    df = df.sort_values("MONTH")
+    months = df["MONTH"].dt.strftime("%Y-%m").tolist()
+
+    def series(col, name, color):
+        y = [round(float(v), 1) if pd.notna(v) else None for v in df[col].tolist()]
+        return {"x": months, "y": y, "type": "scatter", "mode": "lines+markers",
+                "name": name, "line": {"color": color, "width": 2}}
+
+    return {
+        "data": [
+            series("AVG_ENTITIES_DEV", "Dev", "#60a5fa"),
+            series("AVG_ENTITIES_NONPROD", "Non-Prod", "#a78bfa"),
+            series("AVG_ENTITIES_PROD", "Prod", "#34d399"),
+        ],
+        "layout": {
+            "paper_bgcolor": "#0f172a", "plot_bgcolor": "#0f172a", "font": {"color": "#94a3b8"},
+            "yaxis": {"title": "Avg entities / connection", "gridcolor": "#334155"},
+            "legend": {"bgcolor": "#1e293b"},
+            "margin": {"t": 20, "b": 50, "l": 70, "r": 20}, "autosize": True,
         },
     }
 
@@ -558,6 +657,16 @@ CHART_SQL = {
     "connector_changes_by_region": ["q16_connector_changes_by_region"],
     "changes_per_tenant_combo": ["q17_changes_per_customer_by_region_ring"],
     "change_heatmap": ["q18_change_heatmap_region_weekday"],
+    "t1a_tam": ["q26_t1a_multipipeline_tam_monthly"],
+    "t1b_reach": ["q27_t1b_multipipeline_reach"],
+    "t1c_validated": ["q28_t1c_multipipeline_validated"],
+    "t1d_depth": ["q29_t1d_multipipeline_depth"],
+    "t2a_tam": ["q30_t2a_multiinfra_tam_monthly"],
+    "t2b_reach": ["q31_t2b_multiinfra_reach"],
+    "t2c_validated": ["q32_t2c_multiinfra_validated"],
+    "t2d_depth": ["q33_t2d_multiinfra_depth"],
+    "t2c_validated_unification": ["q34_t2c_multiinfra_validated_unification"],
+    "t2d_depth_unification": ["q35_t2d_multiinfra_depth_unification"],
 }
 
 # Maps each table-only section (no chart) to its source query file(s), so it can still
@@ -569,6 +678,97 @@ TABLE_SQL = {
     "removal_events_multi_o11": ["q22_connector_removal_events_multi_o11"],
     "o11_infra_removals_multi_o11": ["q23_o11_customers_removed_infra_multi_o11"],
 }
+
+
+def _funnel_latest(df: pd.DataFrame, count_col: str, denom_col: str) -> dict:
+    """Latest-month (count, denominator, %) for one funnel stage, guarded for empty data."""
+    if df.empty:
+        return {"count": 0, "denom": 0, "pct": 0.0}
+    row = df.sort_values("MONTH").iloc[-1]
+    count = int(row[count_col]) if pd.notna(row[count_col]) else 0
+    denom = int(row[denom_col]) if pd.notna(row[denom_col]) else 0
+    pct = round(count / denom * 100, 1) if denom else 0.0
+    return {"count": count, "denom": denom, "pct": pct}
+
+
+def _depth_latest(df: pd.DataFrame) -> dict:
+    """Latest month with any depth data (dev/nonprod/prod avg entities), guarded for 0 rows."""
+    df = df.dropna(subset=["AVG_ENTITIES_DEV", "AVG_ENTITIES_NONPROD", "AVG_ENTITIES_PROD"], how="all")
+    if df.empty:
+        return None
+    row = df.sort_values("MONTH").iloc[-1]
+    return {
+        "month": row["MONTH"].strftime("%Y-%m"),
+        "dev": round(float(row["AVG_ENTITIES_DEV"]), 1) if pd.notna(row["AVG_ENTITIES_DEV"]) else None,
+        "nonprod": round(float(row["AVG_ENTITIES_NONPROD"]), 1) if pd.notna(row["AVG_ENTITIES_NONPROD"]) else None,
+        "prod": round(float(row["AVG_ENTITIES_PROD"]), 1) if pd.notna(row["AVG_ENTITIES_PROD"]) else None,
+    }
+
+
+def _breakdown_latest(df: pd.DataFrame) -> dict:
+    """Latest-month (one_infra, multi_infra, unresolved, reach) counts from a q32/q34-style
+    infra-breakdown table, guarded for empty data."""
+    if df.empty:
+        return {"one_infra": 0, "multi_infra": 0, "unresolved": 0, "reach": 0}
+    row = df.sort_values("MONTH").iloc[-1]
+    return {
+        "one_infra": int(row["ONE_INFRA_CUSTOMERS"]) if pd.notna(row["ONE_INFRA_CUSTOMERS"]) else 0,
+        "multi_infra": int(row["MULTI_INFRA_CUSTOMERS"]) if pd.notna(row["MULTI_INFRA_CUSTOMERS"]) else 0,
+        "unresolved": int(row["UNRESOLVED_CUSTOMERS"]) if pd.notna(row["UNRESOLVED_CUSTOMERS"]) else 0,
+        "reach": int(row["REACH_CUSTOMERS"]) if pd.notna(row["REACH_CUSTOMERS"]) else 0,
+    }
+
+
+def _build_success_metrics_summary(data: dict) -> dict:
+    """Executive summary text for the Data InterOperability Success Metrics tab: the latest
+    funnel numbers for each task, spelled out in one sentence per stage, plus the business-concept
+    definitions behind each stage so the numbers are legible without reading the SQL."""
+    t1_tam = _funnel_latest(data["q26"], "TAM_CUSTOMERS", "O11_ODC_CUSTOMERS")
+    t1_reach = _funnel_latest(data["q27"], "REACH_CUSTOMERS", "TAM_CUSTOMERS")
+    t1_validated = _funnel_latest(data["q28"], "VALIDATED_CUSTOMERS", "REACH_CUSTOMERS")
+    t1_depth = _depth_latest(data["q29"])
+
+    t2_tam = _funnel_latest(data["q30"], "TAM_CUSTOMERS", "O11_ODC_CUSTOMERS")
+    t2_reach = _funnel_latest(data["q31"], "REACH_CUSTOMERS", "TAM_CUSTOMERS")
+    t2_breakdown = _breakdown_latest(data["q32"])
+    t2_depth = _depth_latest(data["q33"])
+
+    t1_depth_txt = (
+        f"Among validated customers, connections carry an average of {t1_depth['dev']} entities "
+        f"in Dev, {t1_depth['nonprod']} in Non-Prod, and {t1_depth['prod']} in Prod ({t1_depth['month']})."
+        if t1_depth else
+        "No depth data yet: too few validated customers have entity-usage telemetry this period."
+    )
+    t2_depth_txt = (
+        f"Among validated customers, connections carry an average of {t2_depth['dev']} entities "
+        f"in Dev, {t2_depth['nonprod']} in Non-Prod, and {t2_depth['prod']} in Prod ({t2_depth['month']})."
+        if t2_depth else
+        "No depth data: zero customers have validated this stage yet (see warning banner below), "
+        "so there is no connection population to measure entity depth on."
+    )
+
+    task1_summary = (
+        f"{t1_tam['count']} of {t1_tam['denom']} O11/ODC customers ({t1_tam['pct']}%) are TAM -- "
+        f"their O11 infrastructure has 2+ parallel pipelines. Of those, {t1_reach['count']} "
+        f"({t1_reach['pct']}%) reach baseline adoption (at least one live O11 Data Fabric "
+        f"connection), and {t1_validated['count']} of those {t1_reach['count']} ({t1_validated['pct']}%) "
+        f"are validated -- connected to 2+ distinct non-development O11 environments. {t1_depth_txt}"
+    )
+    task2_summary = (
+        f"{t2_tam['count']} of {t2_tam['denom']} O11/ODC customers ({t2_tam['pct']}%) are TAM -- "
+        f"they hold 2+ distinct O11 activation codes (separate infrastructures). Of those, "
+        f"{t2_reach['count']} ({t2_reach['pct']}%) reach baseline adoption (at least one live O11 "
+        f"Data Fabric connection). Of those {t2_breakdown['reach']} reach customers: "
+        f"{t2_breakdown['one_infra']} connect to exactly 1 O11 infrastructure, "
+        f"{t2_breakdown['multi_infra']} connect to 2+ (validated), and "
+        f"{t2_breakdown['unresolved']} are unresolved (the target O11 infra can't be attributed "
+        f"to their connections). {t2_depth_txt}"
+    )
+
+    return {
+        "task1_summary": task1_summary,
+        "task2_summary": task2_summary,
+    }
 
 
 def _build_sql_map(query_dir: str = "queries") -> dict:
@@ -788,6 +988,26 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "connector_changes_by_region": _build_region_variants(data["q16"]),
             "changes_per_tenant_combo": _chart_changes_per_tenant_combo(data["q17"]),
             "change_heatmap": _build_heatmap_variants(data["q18"]),
+            "t1a_tam": _chart_funnel_stage(
+                data["q26"], "TAM_CUSTOMERS", "O11_ODC_CUSTOMERS",
+                "# Multi-Pipeline TAM Customers", "% of O11+ODC Customers", "#60a5fa"),
+            "t1b_reach": _chart_funnel_stage(
+                data["q27"], "REACH_CUSTOMERS", "TAM_CUSTOMERS",
+                "# Reach Customers", "% of TAM", "#a78bfa"),
+            "t1c_validated": _chart_funnel_stage(
+                data["q28"], "VALIDATED_CUSTOMERS", "REACH_CUSTOMERS",
+                "# Validated Customers", "% of Reach", "#34d399"),
+            "t1d_depth": _chart_depth_trend(data["q29"]),
+            "t2a_tam": _chart_funnel_stage(
+                data["q30"], "TAM_CUSTOMERS", "O11_ODC_CUSTOMERS",
+                "# Multi-Infra TAM Customers", "% of O11+ODC Customers", "#60a5fa"),
+            "t2b_reach": _chart_funnel_stage(
+                data["q31"], "REACH_CUSTOMERS", "TAM_CUSTOMERS",
+                "# Reach Customers", "% of TAM", "#a78bfa"),
+            "t2c_validated": _chart_infra_breakdown(data["q32"]),
+            "t2d_depth": _chart_depth_trend(data["q33"]),
+            "t2c_validated_unification": _chart_infra_breakdown(data["q34"]),
+            "t2d_depth_unification": _chart_depth_trend(data["q35"]),
         },
         "tables": {
             "adoption_trend": table_rows,
@@ -800,6 +1020,7 @@ def compute_metrics(data: dict, _today: pd.Timestamp | None = None, query_dir: s
             "removal_events_multi_o11": removal_events_multi_o11,
             "o11_infra_removals_multi_o11": o11_infra_removals_multi_o11,
         },
+        "success_metrics": _build_success_metrics_summary(data),
         "sql": _build_sql_map(query_dir),
     }
 

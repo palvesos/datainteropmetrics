@@ -42,6 +42,14 @@
     .callout { background: #1e3a5f; border: 1px solid #2563eb; border-radius: 6px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
     .callout-value { font-size: 22px; font-weight: 700; color: #f59e0b; }
     .callout-text { font-size: 12px; color: #94a3b8; }
+    .warning-banner { background: #422006; border: 1px solid #b45309; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; font-size: 12px; color: #fcd34d; line-height: 1.5; }
+    .warning-banner strong { color: #fef3c7; }
+    .exec-summary { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 16px; font-size: 12.5px; line-height: 1.6; color: #cbd5e1; }
+    .exec-summary h4 { color: #60a5fa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .exec-summary p { margin-bottom: 10px; }
+    .exec-summary dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 12px; }
+    .exec-summary dt { color: #94a3b8; font-weight: 600; white-space: nowrap; }
+    .exec-summary dd { color: #64748b; }
     @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .chart-row { grid-template-columns: 1fr; } .chart-row.chart-row-3 { grid-template-columns: 1fr; } }
     .sql-block { margin-top: 10px; }
     .sql-toggle { background: #0f172a; color: #60a5fa; border: 1px solid #334155; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; font-family: inherit; letter-spacing: 0.03em; }
@@ -83,6 +91,7 @@
   <button class="tab-btn" onclick="switchTab('targeting')">Targeting</button>
   <button class="tab-btn" onclick="switchTab('datainterop')">Data InterOperability</button>
   <button class="tab-btn" onclick="switchTab('connectorchanges')">Data InterOperability - UI Telemetry</button>
+  <button class="tab-btn" onclick="switchTab('successmetrics')">Data InterOperability Success Metrics</button>
 </nav>
 
 <!-- OVERVIEW -->
@@ -295,40 +304,13 @@
     <div class="section"><h3>Customers with Apps that use Data Connections for O11 — Production</h3><div id="chart-interop-apps-prod" class="chart-container tall"></div>{{ sql_panel('interop_apps_prod') }}</div>
   </div>
   <div class="section">
-    <h3>Customers Who Fully Removed Their O11 Connector Infrastructure</h3>
-    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      EXTERNALCONNECTIONCOUNT is a daily gauge that reports even with no change, so a >14-day
-      silence after a nonzero reading means the connector was actually removed. Aggregated to the
-      tenant level — a customer counts only if it no longer reports <em>any</em> O11 connector in
-      <em>any</em> environment (a single quiet dev env while the main connector is live does not
-      count). Restricted to tenants still active/current with recent platform usage, to exclude
-      customers who churned entirely rather than just dropping the O11 connector.
-    </p>
-    <table>
-      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
-      <tbody>
-        {% for r in tables.o11_infra_removals %}
-        <tr>
-          <td>{{ r.company }}</td>
-          <td>{{ r.tenant_id }}</td>
-          <td>{{ r.n_envs }}</td>
-          <td>{{ r.peak_count }}</td>
-          <td>{{ r.last_count }}</td>
-          <td>{{ r.last_seen }}</td>
-          <td>{{ r.days_silent }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {{ sql_panel('o11_infra_removals') }}
-  </div>
-  <div class="section">
     <h3>Connector Removal Events by Company (all-time)</h3>
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">
       Every day-over-day decrease in a tenant/environment's O11 connector count, rolled up per
-      company — partial removals included, not just full disconnects (see the table above for
-      customers who dropped O11 entirely). Peak = max simultaneous connectors the company ever
-      had; Today = current live connectors (series silent >14 days count as removed). Excludes
+      company — partial removals included, not just full disconnects (see the "Customers Who Fully
+      Removed Their O11 Connector Infrastructure" table in the Data InterOperability - UI Telemetry
+      tab for customers who dropped O11 entirely). Peak = max simultaneous connectors the company
+      ever had; Today = current live connectors (series silent >14 days count as removed). Excludes
       internal OutSystems tenants.
     </p>
     <table>
@@ -369,57 +351,6 @@
       </tbody>
     </table>
     {{ sql_panel('multi_o11_with_df') }}
-  </div>
-  <div class="section">
-    <h3>Connector Removal Events — Multi-O11-Infra Customers (all-time)</h3>
-    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      The "Connector Removal Events by Company" view above, restricted to the multi-O11-infra
-      population (q21). {% if not tables.removal_events_multi_o11 %}<strong>No rows:</strong> every
-      company with connector-removal events has only a single O11 infrastructure — removal activity
-      is concentrated entirely among single-infra customers.{% endif %}
-    </p>
-    <table>
-      <thead><tr><th>Company</th><th>O11 Infras</th><th>Removal Events</th><th>Connectors Removed</th><th>Peak Connectors</th><th>Connectors Today</th></tr></thead>
-      <tbody>
-        {% for r in tables.removal_events_multi_o11 %}
-        <tr>
-          <td>{{ r.company }}</td>
-          <td>{{ r.o11_infras }}</td>
-          <td>{{ r.removal_events }}</td>
-          <td>{{ r.connectors_removed }}</td>
-          <td>{{ r.peak_connectors }}</td>
-          <td>{{ r.connectors_today }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {{ sql_panel('removal_events_multi_o11') }}
-  </div>
-  <div class="section">
-    <h3>Fully Removed O11 Connector Infrastructure — Multi-O11-Infra Customers</h3>
-    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      The "Customers Who Fully Removed Their O11 Connector Infrastructure" view above, restricted
-      to the multi-O11-infra population (q21) — i.e. customers who removed their O11 Data Fabric
-      connection despite running several O11 infrastructures.
-    </p>
-    <table>
-      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Infras</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
-      <tbody>
-        {% for r in tables.o11_infra_removals_multi_o11 %}
-        <tr>
-          <td>{{ r.company }}</td>
-          <td>{{ r.tenant_id }}</td>
-          <td>{{ r.o11_infras }}</td>
-          <td>{{ r.n_envs }}</td>
-          <td>{{ r.peak_count }}</td>
-          <td>{{ r.last_count }}</td>
-          <td>{{ r.last_seen }}</td>
-          <td>{{ r.days_silent }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {{ sql_panel('o11_infra_removals_multi_o11') }}
   </div>
 </div>
 
@@ -492,6 +423,180 @@
       </tbody>
     </table>
   </div>
+  <div class="section">
+    <h3>Customers Who Fully Removed Their O11 Connector Infrastructure</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      EXTERNALCONNECTIONCOUNT is a daily gauge that reports even with no change, so a >14-day
+      silence after a nonzero reading means the connector was actually removed. Aggregated to the
+      tenant level — a customer counts only if it no longer reports <em>any</em> O11 connector in
+      <em>any</em> environment (a single quiet dev env while the main connector is live does not
+      count). Restricted to tenants still active/current with recent platform usage, to exclude
+      customers who churned entirely rather than just dropping the O11 connector.
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
+      <tbody>
+        {% for r in tables.o11_infra_removals %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.tenant_id }}</td>
+          <td>{{ r.n_envs }}</td>
+          <td>{{ r.peak_count }}</td>
+          <td>{{ r.last_count }}</td>
+          <td>{{ r.last_seen }}</td>
+          <td>{{ r.days_silent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('o11_infra_removals') }}
+  </div>
+  <div class="section">
+    <h3>Connector Removal Events — Multi-O11-Infra Customers (all-time)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      The "Connector Removal Events by Company" view in the Data InterOperability tab, restricted
+      to the multi-O11-infra population (q21). {% if not tables.removal_events_multi_o11 %}<strong>No rows:</strong> every
+      company with connector-removal events has only a single O11 infrastructure — removal activity
+      is concentrated entirely among single-infra customers.{% endif %}
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>O11 Infras</th><th>Removal Events</th><th>Connectors Removed</th><th>Peak Connectors</th><th>Connectors Today</th></tr></thead>
+      <tbody>
+        {% for r in tables.removal_events_multi_o11 %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.o11_infras }}</td>
+          <td>{{ r.removal_events }}</td>
+          <td>{{ r.connectors_removed }}</td>
+          <td>{{ r.peak_connectors }}</td>
+          <td>{{ r.connectors_today }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('removal_events_multi_o11') }}
+  </div>
+  <div class="section">
+    <h3>Fully Removed O11 Connector Infrastructure — Multi-O11-Infra Customers</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      The "Customers Who Fully Removed Their O11 Connector Infrastructure" view above, restricted
+      to the multi-O11-infra population (q21) — i.e. customers who removed their O11 Data Fabric
+      connection despite running several O11 infrastructures.
+    </p>
+    <table>
+      <thead><tr><th>Company</th><th>Tenant</th><th>O11 Infras</th><th>O11 Envs</th><th>Peak Connectors</th><th>Last Known Count</th><th>Telemetry Last Seen</th><th>Days Silent</th></tr></thead>
+      <tbody>
+        {% for r in tables.o11_infra_removals_multi_o11 %}
+        <tr>
+          <td>{{ r.company }}</td>
+          <td>{{ r.tenant_id }}</td>
+          <td>{{ r.o11_infras }}</td>
+          <td>{{ r.n_envs }}</td>
+          <td>{{ r.peak_count }}</td>
+          <td>{{ r.last_count }}</td>
+          <td>{{ r.last_seen }}</td>
+          <td>{{ r.days_silent }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {{ sql_panel('o11_infra_removals_multi_o11') }}
+  </div>
+</div>
+
+<div id="tab-successmetrics" class="tab-content">
+  <div class="exec-summary">
+    <h4>Executive Summary</h4>
+    <p><strong>Task 1 (multi-pipeline, one infra):</strong> {{ success_metrics.task1_summary }}</p>
+    <p><strong>Task 2 (multi-infra, distinct activation codes):</strong> {{ success_metrics.task2_summary }}</p>
+    <h4>Definitions</h4>
+    <dl>
+      <dt>O11/ODC customer</dt><dd>a customer whose deployment option is O11/ODC that month (point-in-time, from the customer policy population).</dd>
+      <dt>Multi-Pipeline TAM (Task 1)</dt><dd>an O11/ODC customer whose O11 infrastructure has 2+ parallel live production environments -- a proxy for "2+ pipelines" (see warning banner).</dd>
+      <dt>Multi-Infra TAM (Task 2)</dt><dd>an O11/ODC customer holding 2+ distinct O11 activation codes -- i.e. 2+ separate enterprise infrastructures, as of that month.</dd>
+      <dt>Reach</dt><dd>of TAM, customers with at least one live O11 Data Fabric connection, in any environment/infrastructure -- baseline connectivity only.</dd>
+      <dt>Validated use case</dt><dd>of Reach -- Task 1: connected to 2+ distinct non-development O11 environments; Task 2: connections span 2+ distinct O11 infrastructures at once.</dd>
+      <dt>Depth</dt><dd>average # of entities imported per Data Fabric connection, split Dev / Non-Prod / Prod, among validated customers.</dd>
+    </dl>
+  </div>
+
+  <h3 style="color:#cbd5e1;font-size:14px;margin-bottom:10px">Task 1 — Multiple Pipelines within One O11 Infrastructure</h3>
+  <div class="warning-banner">
+    <strong>⚠ Pipeline count is inferred, not measured.</strong> The O11 provisioning schema has no
+    pipeline/path identifier, so "2+ pipelines" is proxied as "2+ live Production environments" in
+    one infrastructure (see q25/q26 for the full rationale and coverage caveats). A consequence:
+    the <strong>Validated</strong> stage below only confirms a customer connected 2+ distinct
+    non-development O11 environments -- it does <strong>not</strong> confirm those environments sit
+    on different pipelines (e.g. QA1+PRD1 on the same pipeline would still count). Also, the infra
+    shape used is a <strong>current snapshot</strong> (no history), so this trend applies today's
+    shape retroactively to each month's cohort -- movement reflects cohort churn, not historical
+    pipeline changes.
+  </div>
+  <div class="chart-row chart-row-3">
+    <div class="section"><h3>(a) TAM — Multi-Pipeline Customers</h3><div id="chart-t1a-tam" class="chart-container tall"></div>{{ sql_panel('t1a_tam') }}</div>
+    <div class="section"><h3>(b) Reach — Baseline O11 Data Fabric Adoption</h3><div id="chart-t1b-reach" class="chart-container tall"></div>{{ sql_panel('t1b_reach') }}</div>
+    <div class="section"><h3>(c) Validated — 2+ Non-Dev Environments Connected</h3><div id="chart-t1c-validated" class="chart-container tall"></div>{{ sql_panel('t1c_validated') }}</div>
+  </div>
+  <div class="section">
+    <h3>(d) Depth/Breadth — Avg Entities per Connection (Dev/Non-Prod/Prod)</h3>
+    <div id="chart-t1d-depth" class="chart-container tall"></div>
+    {{ sql_panel('t1d_depth') }}
+  </div>
+
+  <h3 style="color:#cbd5e1;font-size:14px;margin:24px 0 10px">Task 2 — Multiple O11 Infrastructures (Distinct Activation Codes)</h3>
+  <div class="chart-row">
+    <div class="section"><h3>(a) TAM — Multi-Infra Customers</h3><div id="chart-t2a-tam" class="chart-container tall"></div>{{ sql_panel('t2a_tam') }}</div>
+    <div class="section"><h3>(b) Reach — Baseline O11 Data Fabric Adoption</h3><div id="chart-t2b-reach" class="chart-container tall"></div>{{ sql_panel('t2b_reach') }}</div>
+  </div>
+  <div class="section">
+    <h3>(c) Validated — # O11 Infras per Reach Customer — Signal: ODC Interop Code</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Of the Reach cohort, split by how many distinct O11 activation codes their live connections
+      target that month (via INTEROPERABILITY_RELATED_ACTIVATION_CODE, the ODC tenant's linked O11
+      infra -- see q32). "Validated" = 2+. "Unresolved" = connected but the target O11 infra can't
+      be attributed. This field is well-populated (~79% of the O11/ODC cohort has it set) but is
+      tenant-level, not per-connection -- see the warning banner above for why a customer holding
+      multiple O11-linked tenants can still show as 1-infra if only one tenant is actively connected.
+    </p>
+    <div id="chart-t2c-validated" class="chart-container tall"></div>
+    {{ sql_panel('t2c_validated') }}
+  </div>
+  <div class="section">
+    <h3>(c) Validated — # O11 Infras per Reach Customer — Signal: LT Unification Handshake (new)</h3>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      Same breakdown, sourced instead from TELEMETRYANALYTICS.METRICS.LIFETIME_UNIFICATION -- O11
+      Lifetime's new per-handshake telemetry (DOMAIN_ODCTENANTID + ENV_ACTIVATION_CODE), a direct
+      event-level signal rather than q32's static tenant-level field. <strong>Expect this to read
+      as almost entirely "Unresolved" today:</strong> as of this report, this telemetry stream has
+      only ~8 rows total, all from the last few days ("Handshake_v1", a v1 event type), and none of
+      its tenant IDs yet resolve to a real customer in CANONICAL -- likely early rollout/test
+      traffic. This is the better long-term signal once it matures; kept here as a running check
+      rather than backfilled or estimated.
+    </p>
+    <div id="chart-t2c-validated-unification" class="chart-container tall"></div>
+    {{ sql_panel('t2c_validated_unification') }}
+  </div>
+  <div class="chart-row">
+    <div class="section">
+      <h3>(d) Depth/Breadth — Avg Entities per Connection — Signal: ODC Interop Code</h3>
+      <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+        Averaged per connection across all of a customer's O11 infrastructures combined, not broken
+        out per activation code (see q33). Currently empty: zero customers are in the 2+-infra
+        (validated) bucket above yet, so there is no connection population to measure.
+      </p>
+      <div id="chart-t2d-depth" class="chart-container tall"></div>
+      {{ sql_panel('t2d_depth') }}
+    </div>
+    <div class="section">
+      <h3>(d) Depth/Breadth — Avg Entities per Connection — Signal: LT Unification Handshake (new)</h3>
+      <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+        Same depth calculation, scoped to the LT Unification-validated cohort above (see q35).
+        Empty today for the same reason: no real customer has validated via this signal yet.
+      </p>
+      <div id="chart-t2d-depth-unification" class="chart-container tall"></div>
+      {{ sql_panel('t2d_depth_unification') }}
+    </div>
+  </div>
 </div>
 
 
@@ -516,7 +621,17 @@
     connector_changes_dow:     {{ charts.connector_changes_dow | tojson }},
     connector_changes_by_region: {{ charts.connector_changes_by_region | tojson }},
     changes_per_tenant_combo: {{ charts.changes_per_tenant_combo | tojson }},
-    change_heatmap: {{ charts.change_heatmap | tojson }}
+    change_heatmap: {{ charts.change_heatmap | tojson }},
+    t1a_tam:       {{ charts.t1a_tam | tojson }},
+    t1b_reach:     {{ charts.t1b_reach | tojson }},
+    t1c_validated: {{ charts.t1c_validated | tojson }},
+    t1d_depth:     {{ charts.t1d_depth | tojson }},
+    t2a_tam:       {{ charts.t2a_tam | tojson }},
+    t2b_reach:     {{ charts.t2b_reach | tojson }},
+    t2c_validated: {{ charts.t2c_validated | tojson }},
+    t2d_depth:     {{ charts.t2d_depth | tojson }},
+    t2c_validated_unification: {{ charts.t2c_validated_unification | tojson }},
+    t2d_depth_unification:     {{ charts.t2d_depth_unification | tojson }}
   };
 
   var cfg = {responsive: true, displayModeBar: false};
@@ -540,6 +655,16 @@
   Plotly.newPlot('chart-connector-changes-monthly', charts.connector_changes_monthly.data, charts.connector_changes_monthly.layout, cfg);
   Plotly.newPlot('chart-connector-changes-dow',     charts.connector_changes_dow.data,     charts.connector_changes_dow.layout,     cfg);
   Plotly.newPlot('chart-changes-per-tenant', charts.changes_per_tenant_combo.data, charts.changes_per_tenant_combo.layout, cfg);
+  Plotly.newPlot('chart-t1a-tam',       charts.t1a_tam.data,       charts.t1a_tam.layout,       cfg);
+  Plotly.newPlot('chart-t1b-reach',     charts.t1b_reach.data,     charts.t1b_reach.layout,     cfg);
+  Plotly.newPlot('chart-t1c-validated', charts.t1c_validated.data, charts.t1c_validated.layout, cfg);
+  Plotly.newPlot('chart-t1d-depth',     charts.t1d_depth.data,     charts.t1d_depth.layout,     cfg);
+  Plotly.newPlot('chart-t2a-tam',       charts.t2a_tam.data,       charts.t2a_tam.layout,       cfg);
+  Plotly.newPlot('chart-t2b-reach',     charts.t2b_reach.data,     charts.t2b_reach.layout,     cfg);
+  Plotly.newPlot('chart-t2c-validated', charts.t2c_validated.data, charts.t2c_validated.layout, cfg);
+  Plotly.newPlot('chart-t2d-depth',     charts.t2d_depth.data,     charts.t2d_depth.layout,     cfg);
+  Plotly.newPlot('chart-t2c-validated-unification', charts.t2c_validated_unification.data, charts.t2c_validated_unification.layout, cfg);
+  Plotly.newPlot('chart-t2d-depth-unification',     charts.t2d_depth_unification.data,     charts.t2d_depth_unification.layout,     cfg);
 
   var hmData = charts.change_heatmap;
   function renderHeatmap() {
