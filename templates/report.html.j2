@@ -558,6 +558,13 @@
       tenant-level, not per-connection -- see the warning banner above for why a customer holding
       multiple O11-linked tenants can still show as 1-infra if only one tenant is actively connected.
     </p>
+    <p style="font-size:11px;color:#64748b;margin-bottom:10px">
+      <strong>What "Unresolved" means:</strong> these are already-connected (Reach) customers for
+      whom INTEROPERABILITY_RELATED_ACTIVATION_CODE is NULL on every one of their connections that
+      month -- so there's no way to tell whether they're on 1 infra or 2+. They are deliberately
+      kept separate rather than defaulted into the 1-infra bucket. This count has been trending up
+      month over month, which is worth watching as a data-quality signal on this field.
+    </p>
     <div id="chart-t2c-validated" class="chart-container tall"></div>
     {{ sql_panel('t2c_validated') }}
   </div>

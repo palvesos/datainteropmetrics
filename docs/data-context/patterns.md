@@ -33,3 +33,38 @@ snow CLI returns DECIMAL/NUMERIC as strings. Coerce with pd.to_numeric() before 
 
 ## Pitfall: monthly snapshot double-count
 Any monthly-snapshot table (CUSTOMERUNIFIEDINFO, ODCAGENT) double-counts without a month filter.
+
+## Pitfall: field-population-rate measured at the wrong grain
+"% of rows with column X populated" across a whole table can be wildly misleading if most
+rows belong to companies outside your actual cohort. Found on
+`INFRASTRUCTURE.interoperability_related_activation_code`: ~0.7% populated across ALL 96,900
+ODC infra rows system-wide, but ~79% populated when scoped to company-level within the
+actual O11/ODC cohort (838 companies). Always measure population rate as
+`COUNT(DISTINCT company) WHERE populated / COUNT(DISTINCT company)` within the relevant
+cohort, never as a raw row-level fraction across the whole table.
+
+## Pitfall: a CTE must re-join back to its cohort, not just re-derive it
+When a downstream CTE (e.g. "Reach" or "Validated") recomputes an upstream population (e.g.
+"TAM") from scratch instead of joining the upstream CTE's actual output, it can silently drop
+the cohort restriction. Concretely: `tam_month AS (SELECT month, company_sfdc_id FROM
+infra_count WHERE n_codes >= 2)` computes TAM over EVERY company with 2+ codes, not just the
+O11/ODC ones — even if an earlier CTE in the same query already defined the correct O11/ODC
+cohort. Fix: join back explicitly, e.g. `FROM o11_odc_month o JOIN infra_count ic ON ic.month
+= o.month AND ic.company_sfdc_id = o.company_sfdc_id WHERE ic.n_codes >= 2`. Caught this in
+`q31`/`q32`/`q33` (Task 2 Success Metrics funnel) — TAM read 1510 instead of matching q30's
+258 until fixed.
+
+## Funnel-stage % denominators
+When building a multi-stage funnel (TAM → Reach → Validated → ...), each stage's % should be
+relative to the PRIOR stage's count, not the whole population — otherwise it's not a funnel,
+it's just three independent rates against the same base. See `_chart_funnel_stage` in
+`render.py` (Success Metrics tab), which takes an explicit `denom_col` per stage rather than
+hardcoding one shared denominator.
+
+## SCD2 real-history vs. current-state-only snapshot
+Not every "infra config" table is historized. `CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE` is
+real SCD2 (`date_from`/`date_to`, current rows sentinel-closed at `2999-12-31`) and supports
+genuine point-in-time reconstruction. `CLOUDFRAMEWORKPRODUCTION.NOW.OSUSR_YDY_*` (the O11
+provisioning DB) is NOT — it's current-state only, no version history at all. Check for
+`date_from`/`date_to` columns (and whether current rows close at a sentinel date) before
+assuming a table can answer "what did this look like last month."
