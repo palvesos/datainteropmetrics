@@ -11,6 +11,21 @@ Why: CUSTOMERUNIFIEDINFO is a monthly snapshot; without a month filter you count
 (2026-07-01) where ARR_EUR is NULL for all ~2400 rows, making revenue-based queries return
 nothing or misleading zeros.
 
+## O11 infrastructure = enterprise only (business rule)
+    WHERE product_family = 'O11'
+      AND infrastructure_type = 'enterprise'
+Whenever a query counts or joins a customer's O11 infrastructures / activation codes on
+`CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE`, restrict to `infrastructure_type = 'enterprise'`.
+**`enterprise-freemium` and `enterprise-trial` are out of scope** (decided 2026-10-02): a
+customer with one production infra plus a trial/freemium one is not a "multiple O11
+infrastructures" customer. `personal` and `cloud-cluster` carry no real customer usage and
+are excluded by the same filter. `pge-enterprise` (5 codes, 3 companies) is also excluded by
+this exact-match filter. Applied in q11, q21–q23 and q25–q35.
+Consequence for Success Metrics Task 2: q21 ("Customers with Multiple O11 Infrastructures
+Using Data Fabric") is the per-company view of the q31 Reach stage, not of q30 TAM. It equals
+q31's live Reach list plus companies with any past O11 Data Fabric telemetry that are not
+connected at month end (4 in Aug 2026).
+
 ## SCD2 date-range join
     INNER JOIN canonical.customersuccess.infrastructure infra
       ON infra.tenant_id = ext.tenant

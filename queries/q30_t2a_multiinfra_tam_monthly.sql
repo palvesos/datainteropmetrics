@@ -27,6 +27,7 @@ infra_asof AS (
   FROM month_series m
   JOIN CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE i
     ON i.product_family = 'O11'
+    AND i.infrastructure_type = 'enterprise'   -- freemium/trial out of scope, see data-context
     AND NOT i.is_deleted
     AND i.is_active
     AND i.date_from <= LAST_DAY(m.month)

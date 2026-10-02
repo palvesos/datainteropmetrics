@@ -62,7 +62,11 @@ report tab: TAM → Reach → Validated use case → Depth/breadth, for both tas
    Using Data Fabric", pre-existing table in the Data InterOperability tab) against the new
    `q30` Task 2(a) TAM definition — they measure similar but not identical populations (q21
    filters `infrastructure_type='enterprise'` + current-month snapshot; q30 is unrestricted
-   by infra type and uses real SCD2 historization). Not reconciled, just flagging the overlap.
+   by infra type and uses real SCD2 historization). **Reconciled 2026-10-02:** freemium/trial
+   O11 infras are out of scope, so q25–q35 now filter `infrastructure_type = 'enterprise'`
+   like q21 (Task 2 TAM Sep 2026: 258 → 200, Reach 47 → 35). q21 turned out to be the
+   per-company view of q31 Reach (+ previously connected companies), not of q30 TAM. Rule
+   recorded in `docs/data-context/patterns.md`.
 5. `q25` (`q25_t1a_multipipeline_tam.sql`, the point-in-time segment/coverage breakdown for
    Task 1 TAM) and `q24` (O11 lifetime-version check) exist in `queries/` but are **not**
    wired into the Success Metrics tab's narrative — they predate it and were left as

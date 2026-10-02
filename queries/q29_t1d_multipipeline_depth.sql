@@ -20,6 +20,7 @@ o11_codes AS (
   FROM CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE
   WHERE is_current AND is_active
     AND product_family = 'O11'
+    AND infrastructure_type = 'enterprise'   -- freemium/trial out of scope, see data-context
     AND company_sfdc_id IS NOT NULL
     AND activation_code IS NOT NULL
 ),

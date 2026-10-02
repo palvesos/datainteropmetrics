@@ -37,6 +37,13 @@
   `queries/q30_t2a_multiinfra_tam_monthly.sql` to count distinct O11 `activation_code`s a
   company held as of each past month-end — a genuine historical trend, not a current-state
   backfill.
+- **`infrastructure_type` domain for `product_family = 'O11'`** (current rows, 2026-10-02):
+  `personal` 113,621 codes / 0 companies, `enterprise` 6,253 / 3,867, `enterprise-freemium`
+  1,730 / 1,148, `cloud-cluster` 1,334 / 1, `enterprise-trial` 851 / 651, `pge-enterprise`
+  5 / 3. **Business rule: an "O11 infrastructure" means `infrastructure_type = 'enterprise'`**
+  — freemium and trial infras are out of scope (decided 2026-10-02), see patterns.md
+  "O11 infrastructure = enterprise only". Without the filter, 55 of 253 O11/ODC
+  "multi-infra" companies (22%, Aug 2026) qualify only because of a freemium/trial code.
 - **`interoperability_related_activation_code`** (on ODC-family rows, i.e.
   `product_family = 'ODC'`): the real O11 `activation_code` an ODC tenant's Data Fabric
   connection targets, matched via `tenant_id`. **Grain is per ODC TENANT, not per
