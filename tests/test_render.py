@@ -13,7 +13,7 @@ def test_load_data_raises_if_file_missing(tmp_path):
         load_data(str(tmp_path))
 
 
-def test_load_data_returns_eighteen_keys(tmp_path, sample_data):
+def test_load_data_returns_all_keys(tmp_path, sample_data):
     files = {
         "q1": "q1_adoption_trend.parquet", "q2": "q2_by_product_family.parquet",
         "q3": "q3_by_arch_type.parquet", "q4": "q4_executions.parquet",
@@ -33,6 +33,16 @@ def test_load_data_returns_eighteen_keys(tmp_path, sample_data):
         "q21": "q21_multi_o11_infra_with_df.parquet",
         "q22": "q22_connector_removal_events_multi_o11.parquet",
         "q23": "q23_o11_customers_removed_infra_multi_o11.parquet",
+        "q26": "q26_t1a_multipipeline_tam_monthly.parquet",
+        "q27": "q27_t1b_multipipeline_reach.parquet",
+        "q28": "q28_t1c_multipipeline_validated.parquet",
+        "q29": "q29_t1d_multipipeline_depth.parquet",
+        "q30": "q30_t2a_multiinfra_tam_monthly.parquet",
+        "q31": "q31_t2b_multiinfra_reach.parquet",
+        "q32": "q32_t2c_multiinfra_validated.parquet",
+        "q33": "q33_t2d_multiinfra_depth.parquet",
+        "q34": "q34_t2c_multiinfra_validated_unification.parquet",
+        "q35": "q35_t2d_multiinfra_depth_unification.parquet",
     }
     for key, fn in files.items():
         sample_data[key].to_parquet(tmp_path / fn, index=False)
@@ -95,6 +105,9 @@ def test_compute_metrics_has_all_charts(sample_data):
         "connector_changes_by_region",
         "changes_per_tenant_combo",
         "change_heatmap",
+        "t1a_tam", "t1b_reach", "t1c_validated", "t1d_depth",
+        "t2a_tam", "t2b_reach", "t2c_validated", "t2d_depth",
+        "t2c_validated_unification", "t2d_depth_unification",
     }
     assert set(metrics["charts"].keys()) == expected
 
@@ -708,3 +721,50 @@ def test_render_shows_trialing_cards(sample_data, tmp_path):
     assert "Trialing Connectors (last full mo.)" in content
     assert "Trialing Tenants (last full mo.)" in content
     assert "1,300" in content   # trialing connections, last full month, comma-formatted (KPI card only)
+
+
+# --- Success Metrics tab ---
+
+def test_funnel_stage_pct_is_relative_to_prior_stage(sample_data):
+    chart = compute_metrics(sample_data)["charts"]["t2b_reach"]
+    bars, pct = chart["data"]
+    assert bars["x"] == ["2026-08", "2026-09"]
+    assert bars["y"] == [43, 47]
+    assert pct["y"] == [round(43 / 254 * 100, 1), round(47 / 258 * 100, 1)]
+
+
+def test_infra_breakdown_stacks_one_multi_unresolved(sample_data):
+    chart = compute_metrics(sample_data)["charts"]["t2c_validated"]
+    assert chart["layout"]["barmode"] == "stack"
+    by_name = {t["name"]: t["y"] for t in chart["data"]}
+    assert by_name == {"1 O11 infra": [0, 2], "2+ O11 infras": [0, 0],
+                       "Unresolved": [43, 45]}
+
+
+def test_depth_trend_handles_empty_cohort(sample_data):
+    chart = compute_metrics(sample_data)["charts"]["t2d_depth"]
+    assert all(t["x"] == [] and t["y"] == [] for t in chart["data"])
+
+
+def test_success_metrics_summary_uses_latest_month(sample_data):
+    sm = compute_metrics(sample_data)["success_metrics"]
+    assert "87 of 838 O11/ODC customers" in sm["task1_summary"]
+    assert "19 of those 26" in sm["task1_summary"]
+    t2 = sm["task2_summary"]
+    assert "258 of 838 O11/ODC customers" in t2
+    assert "2 have exactly 1 O11 infrastructure linked" in t2
+    assert "45 are unresolved" in t2
+    assert "No depth data" in t2
+
+
+def test_render_has_success_metrics_tab(sample_data, tmp_path):
+    metrics = compute_metrics(sample_data)
+    output = str(tmp_path / "report.html")
+    render(metrics, output_path=output)
+    content = open(output).read()
+    sm = _tab_slice(content, "successmetrics")
+    for cid in ("chart-t1a-tam", "chart-t1b-reach", "chart-t1c-validated", "chart-t1d-depth",
+                "chart-t2a-tam", "chart-t2b-reach", "chart-t2c-validated", "chart-t2d-depth",
+                "chart-t2c-validated-unification", "chart-t2d-depth-unification"):
+        assert f'id="{cid}"' in sm, f"{cid} missing from Success Metrics tab"
+    assert "Signal: O11 Infra Configuration" in sm

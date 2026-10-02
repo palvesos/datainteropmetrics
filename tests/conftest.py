@@ -195,7 +195,37 @@ def sample_data():
         "DAYS_SINCE_CONNECTOR_TELEMETRY": [101],
         "LAST_PLATFORM_USAGE_DAY": pd.to_datetime(["2026-06-15"]),
     })
+    # Success Metrics funnels (q26-q35): Task 1 = multi-pipeline, Task 2 = multi-infra.
+    sm_months = pd.to_datetime(["2026-08-01", "2026-09-01"])
+    q26 = pd.DataFrame({"MONTH": sm_months, "TAM_CUSTOMERS": [87, 87],
+                        "O11_ODC_CUSTOMERS": [819, 838]})
+    q27 = pd.DataFrame({"MONTH": sm_months, "REACH_CUSTOMERS": [25, 26],
+                        "TAM_CUSTOMERS": [87, 87]})
+    q28 = pd.DataFrame({"MONTH": sm_months, "VALIDATED_CUSTOMERS": [18, 19],
+                        "REACH_CUSTOMERS": [25, 26]})
+    q29 = pd.DataFrame({"MONTH": sm_months, "AVG_ENTITIES_DEV": [12.08, 13.23],
+                        "AVG_ENTITIES_NONPROD": [14.81, 16.15],
+                        "AVG_ENTITIES_PROD": [12.85, 14.05]})
+    q30 = pd.DataFrame({"MONTH": sm_months, "TAM_CUSTOMERS": [254, 258],
+                        "O11_ODC_CUSTOMERS": [819, 838]})
+    q31 = pd.DataFrame({"MONTH": sm_months, "REACH_CUSTOMERS": [43, 47],
+                        "TAM_CUSTOMERS": [254, 258]})
+    q32 = pd.DataFrame({"MONTH": sm_months, "ONE_INFRA_CUSTOMERS": [0, 2],
+                        "MULTI_INFRA_CUSTOMERS": [0, 0],
+                        "UNRESOLVED_CUSTOMERS": [43, 45], "REACH_CUSTOMERS": [43, 47]})
+    q34 = pd.DataFrame({"MONTH": sm_months, "ONE_INFRA_CUSTOMERS": [0, 0],
+                        "MULTI_INFRA_CUSTOMERS": [0, 0],
+                        "UNRESOLVED_CUSTOMERS": [43, 47], "REACH_CUSTOMERS": [43, 47]})
+    # Task 2 depth is empty in real data (no validated cohort yet) -- keep that shape.
+    empty_depth = pd.DataFrame({
+        "MONTH": pd.Series([], dtype="datetime64[ns]"),
+        "AVG_ENTITIES_DEV": pd.Series([], dtype="float64"),
+        "AVG_ENTITIES_NONPROD": pd.Series([], dtype="float64"),
+        "AVG_ENTITIES_PROD": pd.Series([], dtype="float64"),
+    })
     return {"q1": q1, "q2": q2, "q3": q3, "q4": q4, "q5": q5, "q6": q6,
             "q7": q7, "q8": q8, "q9": q9, "q10": q10, "q11": q11, "q12": q12,
             "q13": q13, "q14": q14, "q15": q15, "q16": q16, "q17": q17, "q18": q18,
-            "q19": q19, "q20": q20, "q21": q21, "q22": q22, "q23": q23}
+            "q19": q19, "q20": q20, "q21": q21, "q22": q22, "q23": q23,
+            "q26": q26, "q27": q27, "q28": q28, "q29": q29, "q30": q30, "q31": q31,
+            "q32": q32, "q33": empty_depth, "q34": q34, "q35": empty_depth.copy()}
