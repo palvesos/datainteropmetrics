@@ -68,3 +68,17 @@ genuine point-in-time reconstruction. `CLOUDFRAMEWORKPRODUCTION.NOW.OSUSR_YDY_*`
 provisioning DB) is NOT — it's current-state only, no version history at all. Check for
 `date_from`/`date_to` columns (and whether current rows close at a sentinel date) before
 assuming a table can answer "what did this look like last month."
+
+## Event-sourced config state (create/update/delete events)
+For CRUD-event tables such as `ODC_METRIC.O11INFRASTRUCTURECONFIGURATION`, reconstruct state
+at a cut-off by taking the latest event per entity key, then dropping entities whose latest
+event is `deleted`:
+```sql
+SELECT * FROM ev
+WHERE ts <= LAST_DAY(month)
+QUALIFY ROW_NUMBER() OVER (PARTITION BY tenantid, infra_key, month ORDER BY ts DESC) = 1
+-- then: WHERE op <> 'deleted'
+```
+Check the table's first event date before building a trend: if the event shipped without a
+backfill, entities that existed before go-live are invisible until they are next touched, so
+early months undercount.

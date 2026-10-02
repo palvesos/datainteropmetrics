@@ -44,8 +44,27 @@
   ODC tenants each linked to a different O11 infra. Population rate must be measured at the
   **company level within the relevant cohort** (e.g. O11/ODC customers): ~79% there, vs. a
   misleading ~0.7% if measured as raw-row-count across all 96,900 ODC infra rows
-  system-wide (most of which are irrelevant trial/unrelated tenants). See
-  `queries/q32_t2c_multiinfra_validated.sql` for the full write-up.
+  system-wide (most of which are irrelevant trial/unrelated tenants). Was q32/q33's Task 2(c)
+  signal until 2026-10-02, replaced by `ODC_METRIC.O11INFRASTRUCTURECONFIGURATION` (below).
+  - **Populated by a provisioning job, not by customer action (validated 2026-10-02).** Of the
+    163 O11-connected ODC tenants that have a value, 147 (90%) already had it at or before
+    their first O11 connection; only 16 gained it afterwards (8–290 days later, no pattern).
+    Most first-coded rows carry the `date_from = 1900-01-01` initial-load sentinel, and ODC
+    row volume jumps from ~200/month to 12k+ in Oct 2025, when the field starts being
+    populated properly (first value Jul 2025). Tenants without a value essentially never get
+    one later, so a gap is not "still pending".
+  - **It reflects the provisioning/commercial link, not actual connection usage.** The value is
+    the O11 infra the ODC tenant was *provisioned against*; it does not prove which O11
+    infra(s) the tenant actually connects to. A tenant connecting to a second O11 infra
+    will not show a second code. Use `TELEMETRYANALYTICS.METRICS.LIFETIME_UNIFICATION`
+    (per-handshake) for actual usage once it has coverage.
+  - **NULL = ODC tenant purchased without an O11 infrastructure link** (assumed, per product
+    team). Those tenants go through a provisioning path with no O11 association, yet can
+    still connect to O11 via Data Fabric. Expect ~10–30% of O11-connected tenants per
+    first-connection cohort to be NULL, higher for the earliest cohort (Sep–Oct 2025: 7/10,
+    connected before the field was reliably populated) and for recent ones (Aug 2026 4/12,
+    Sep 2026 5/10 — small n). Treat NULL as "Unresolved"; never impute and never read it as
+    "not interoperable".
 
 ## CANONICAL.CUSTOMERSUCCESS.ENVIRONMENT
 - **Purpose:** environment metadata (SCD2). **Grain:** one row per environment
@@ -95,7 +114,47 @@
   `CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE` yet (early rollout/test traffic, or sync lag).
   One sample row already showed a single tenant handshaking with 2 distinct O11 codes —
   promising once it matures. Wired in as `queries/q34`/`q35`, kept separate from the
-  `interoperability_related_activation_code`-based `q32`/`q33` rather than merged.
+  `O11INFRASTRUCTURECONFIGURATION`-based `q32`/`q33` rather than merged.
+
+## TELEMETRYANALYTICS.ODC_METRIC.O11INFRASTRUCTURECONFIGURATION
+- **Purpose:** product event emitted by the O11 Bridge Service each time a customer
+  creates/updates/deletes an O11 infrastructure configuration on an ODC tenant — the
+  tenant↔O11-infra link that must exist *before* any O11 Data Fabric connector can be set up
+  (multi-O11-infra capability, GA July 2026; epic RDUCH-41 Success Metric #1). **The
+  authoritative signal for "how many O11 infras is this customer connected to"** — preferred
+  over `INFRASTRUCTURE.interoperability_related_activation_code` (provisioning link, not
+  usage) and `LIFETIME_UNIFICATION` (no resolvable tenants yet).
+  Spec: Confluence RDAI "ODC - o11InfrastructureConfiguration" (page 6700531850); owner team
+  Unification Charlie (vincent.verapen@outsystems.com); tickets RDUOPT-6084, RDUOPT-6242.
+  Dev/test copy: `ODC_METRIC_DEV.O11INFRASTRUCTURECONFIGURATION` — never use for metrics.
+- **Grain:** one row per event (`MESSAGEID` unique — verified, 47/47). All columns `TEXT`.
+- **Key columns:** `TENANTID` (ODC tenant → join `INFRASTRUCTURE.tenant_id`,
+  `product_family='ODC'`, `is_current`), `EVENT_OPERATIONTYPE` (`created`|`updated`|`deleted`),
+  `EVENT_INFRASTRUCTUREKEY` (stable GUID of the config), `EVENT_LIFETIMEURL` (LifeTime URL of
+  the O11 infra — **unique per O11 infra, so distinct URLs per company = # connected O11
+  infras**), `EVENT_PORTFOLIOKEY` (conversion-target ODC portfolio, often NULL — 10/47),
+  `EVENTDATETIME` (ISO-8601 string → `TRY_TO_TIMESTAMP`), `EVENT_EVENTVERSION`.
+- **Spec v1.1 adds `o11UnificationPortfolioKey`** (portfolio provisioned by O11 Unification
+  onboarding; "onboarding completed at" = first `updated` event carrying it, not the first
+  event of any kind). **Not in the production table yet** (checked 2026-10-02: only v1.0 rows,
+  no such column).
+- **State reconstruction:** latest event per (`TENANTID`, `EVENT_INFRASTRUCTUREKEY`) as of a
+  cut-off; config is live unless that latest event is `deleted`. Point-in-time month-end:
+  filter `TRY_TO_TIMESTAMP(eventdatetime) <= LAST_DAY(month)` before ranking. Count
+  `DISTINCT LOWER(RTRIM(event_lifetimeurl, '/'))`, never raw URLs (normalize case/trailing
+  slash). A re-`created` infra with the same URL can reactivate a soft-deleted record.
+- **Exclusions:** OutSystems-internal tenants (company `OutSystems`, or
+  `CANONICAL.CORE.COMPANY.type = 'internal'`) and `pp-*-lt.outsystemsenterprise.com` URLs
+  (internal pre-prod test infras; one internal tenant has 6). Also expect
+  `enterprise-phoenix-trial` tenants (e.g. partners) — decide per metric whether to keep.
+- **Status (checked 2026-10-02): live but NO BACKFILL.** 47 events, 2026-08-27 → 2026-10-01,
+  25 tenants (19 customer, 5 OutSystems-internal, 1 unresolved `pp-` URL), 29 distinct URLs,
+  29 created / 16 updated / 2 deleted. Configurations created before 2026-08-27 only appear
+  if later touched, so coverage is ~25 tenants vs. ~220 ODC tenants with O11 connections in
+  `EXTERNALCONNECTIONCOUNT`. Used by `queries/q32`/`q33` (Task 2(c)/(d)) since 2026-10-02.
+  **No real customer had 2+ live LifeTime URLs** at check time
+  (all 19 customer tenants = exactly 1). Monthly trends before Sep 2026 are not possible
+  from this table; a one-off backfill/snapshot from the owning team would fix that.
 
 ## CLOUDFRAMEWORKPRODUCTION.NOW.OSUSR_YDY_INFRASTRUCTURE / ..SLOT / ..ENVIRONMENT
 - **Purpose:** the O11 cloud provisioning DB — infra → slots (environments) with

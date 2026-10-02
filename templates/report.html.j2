@@ -515,7 +515,7 @@
       <dt>Multi-Pipeline TAM (Task 1)</dt><dd>an O11/ODC customer whose O11 infrastructure has 2+ parallel live production environments -- a proxy for "2+ pipelines" (see warning banner).</dd>
       <dt>Multi-Infra TAM (Task 2)</dt><dd>an O11/ODC customer holding 2+ distinct O11 activation codes -- i.e. 2+ separate enterprise infrastructures, as of that month.</dd>
       <dt>Reach</dt><dd>of TAM, customers with at least one live O11 Data Fabric connection, in any environment/infrastructure -- baseline connectivity only.</dd>
-      <dt>Validated use case</dt><dd>of Reach -- Task 1: connected to 2+ distinct non-development O11 environments; Task 2: connections span 2+ distinct O11 infrastructures at once.</dd>
+      <dt>Validated use case</dt><dd>of Reach -- Task 1: connected to 2+ distinct non-development O11 environments; Task 2: 2+ distinct O11 infrastructures (LifeTime URLs) linked to their ODC tenant(s) at once.</dd>
       <dt>Depth</dt><dd>average # of entities imported per Data Fabric connection, split Dev / Non-Prod / Prod, among validated customers.</dd>
     </dl>
   </div>
@@ -549,21 +549,26 @@
     <div class="section"><h3>(b) Reach — Baseline O11 Data Fabric Adoption</h3><div id="chart-t2b-reach" class="chart-container tall"></div>{{ sql_panel('t2b_reach') }}</div>
   </div>
   <div class="section">
-    <h3>(c) Validated — # O11 Infras per Reach Customer — Signal: ODC Interop Code</h3>
+    <h3>(c) Validated — # O11 Infras per Reach Customer — Signal: O11 Infra Configuration</h3>
+    <div class="warning-banner">
+      <strong>⚠ Data only from 2026-08-27, no backfill.</strong> This signal is the O11 Bridge
+      Service's o11InfrastructureConfiguration event (ODC_METRIC.O11INFRASTRUCTURECONFIGURATION),
+      first emitted on 2026-08-27. ODC↔O11 infrastructure links created before then appear only
+      once they are next edited, so most Reach customers read as "Unresolved" for now, and earlier
+      months are left out rather than estimated.
+    </div>
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      Of the Reach cohort, split by how many distinct O11 activation codes their live connections
-      target that month (via INTEROPERABILITY_RELATED_ACTIVATION_CODE, the ODC tenant's linked O11
-      infra -- see q32). "Validated" = 2+. "Unresolved" = connected but the target O11 infra can't
-      be attributed. This field is well-populated (~79% of the O11/ODC cohort has it set) but is
-      tenant-level, not per-connection -- see the warning banner above for why a customer holding
-      multiple O11-linked tenants can still show as 1-infra if only one tenant is actively connected.
+      Of the Reach cohort, split by how many distinct O11 infrastructures the customer has linked
+      to its ODC tenant(s) at month end -- counted as distinct LifeTime URLs, which are unique per
+      O11 infrastructure, from the latest created/updated/deleted event per link (see q32).
+      "Validated" = 2+. Linking an O11 infrastructure is the prerequisite step before any O11 Data
+      Fabric connector can be set up on it.
     </p>
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">
-      <strong>What "Unresolved" means:</strong> these are already-connected (Reach) customers for
-      whom INTEROPERABILITY_RELATED_ACTIVATION_CODE is NULL on every one of their connections that
-      month -- so there's no way to tell whether they're on 1 infra or 2+. They are deliberately
-      kept separate rather than defaulted into the 1-infra bucket. This count has been trending up
-      month over month, which is worth watching as a data-quality signal on this field.
+      <strong>What "Unresolved" means:</strong> already-connected (Reach) customers with no live
+      O11 infrastructure configuration event yet -- almost always because their link predates the
+      event going live. They are kept separate rather than defaulted into the 1-infra bucket, and
+      should shrink as links are edited or if the owning team backfills the history.
     </p>
     <div id="chart-t2c-validated" class="chart-container tall"></div>
     {{ sql_panel('t2c_validated') }}
@@ -573,7 +578,7 @@
     <p style="font-size:11px;color:#64748b;margin-bottom:10px">
       Same breakdown, sourced instead from TELEMETRYANALYTICS.METRICS.LIFETIME_UNIFICATION -- O11
       Lifetime's new per-handshake telemetry (DOMAIN_ODCTENANTID + ENV_ACTIVATION_CODE), a direct
-      event-level signal rather than q32's static tenant-level field. <strong>Expect this to read
+      handshake-level signal of actual traffic, complementing the configured links above. <strong>Expect this to read
       as almost entirely "Unresolved" today:</strong> as of this report, this telemetry stream has
       only ~8 rows total, all from the last few days ("Handshake_v1", a v1 event type), and none of
       its tenant IDs yet resolve to a real customer in CANONICAL -- likely early rollout/test
@@ -585,10 +590,10 @@
   </div>
   <div class="chart-row">
     <div class="section">
-      <h3>(d) Depth/Breadth — Avg Entities per Connection — Signal: ODC Interop Code</h3>
+      <h3>(d) Depth/Breadth — Avg Entities per Connection — Signal: O11 Infra Configuration</h3>
       <p style="font-size:11px;color:#64748b;margin-bottom:10px">
         Averaged per connection across all of a customer's O11 infrastructures combined, not broken
-        out per activation code (see q33). Currently empty: zero customers are in the 2+-infra
+        out per infrastructure (see q33). Currently empty: zero customers are in the 2+-infra
         (validated) bucket above yet, so there is no connection population to measure.
       </p>
       <div id="chart-t2d-depth" class="chart-container tall"></div>

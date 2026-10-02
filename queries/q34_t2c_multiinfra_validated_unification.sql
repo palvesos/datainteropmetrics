@@ -1,11 +1,12 @@
 -- Data Interoperability Success Metrics -- Task 2, stage (c) Validated use case, monthly trend
 -- -- ALTERNATE SIGNAL, built from O11 Lifetime's new "Unification" handshake telemetry instead
--- of the ODC-side INTEROPERABILITY_RELATED_ACTIVATION_CODE field (see q32 for that version).
+-- of q32's O11INFRASTRUCTURECONFIGURATION link events (q32 originally used the ODC-side
+-- INTEROPERABILITY_RELATED_ACTIVATION_CODE field; replaced 2026-10-02).
 --
 -- Of the Task 2(b) Reach cohort, split by how many distinct O11 activation codes
 -- (ENV_ACTIVATION_CODE) they handshook with that month -- exactly 1 vs 2+ (2+ = the ODC tenant
 -- handshook with 2+ different O11 Lifetime instances, a direct signal of cross-infrastructure
--- interop rather than the indirect, tenant-level code inferred in q32). Unresolved = Reach
+-- interop rather than q32's configured-link signal). Unresolved = Reach
 -- customers with no matching handshake event that month at all.
 --
 -- >>> WHY THIS IS A SEPARATE QUERY, NOT A REPLACEMENT FOR q32 <<<
@@ -15,8 +16,7 @@
 --   CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE (likely internal/test traffic from the feature's
 --   early rollout, or a sync lag). This query will read as empty/near-empty for months until the
 --   feature matures and starts covering real customer tenants -- that is expected, not a bug.
---   Once it does, this is the BETTER signal: event-driven and per-handshake, vs. q32's static,
---   tenant-level field.
+--   Once it does, it complements q32: per-handshake (actual traffic) vs. q32's configured links.
 --
 -- MONTH SEMANTICS DIFFER FROM q32: LIFETIME_UNIFICATION logs discrete handshake EVENTS (not a
 --   daily gauge), so a company counts for a month if it had ANY qualifying handshake sometime

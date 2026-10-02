@@ -288,9 +288,9 @@ def _chart_funnel_stage(df: pd.DataFrame, count_col: str, denom_col: str,
 
 
 def _chart_infra_breakdown(df: pd.DataFrame) -> dict:
-    """Stacked bar: Reach customers split by # distinct O11 activation codes they connect to
-    (or handshake with) that month -- 1, 2+, or Unresolved (connected/handshook but the target
-    O11 code can't be attributed). Replaces a single 'validated' count with the full breakdown."""
+    """Stacked bar: Reach customers split by # distinct O11 infras linked (q32: LifeTime URLs) or
+    handshaken with (q34: activation codes) that month -- 1, 2+, or Unresolved (connected but no
+    O11 infra can be attributed yet). Replaces a single 'validated' count with the full breakdown."""
     df = df.sort_values("MONTH")
     months = df["MONTH"].dt.strftime("%Y-%m").tolist()
 
@@ -759,10 +759,10 @@ def _build_success_metrics_summary(data: dict) -> dict:
         f"they hold 2+ distinct O11 activation codes (separate infrastructures). Of those, "
         f"{t2_reach['count']} ({t2_reach['pct']}%) reach baseline adoption (at least one live O11 "
         f"Data Fabric connection). Of those {t2_breakdown['reach']} reach customers: "
-        f"{t2_breakdown['one_infra']} connect to exactly 1 O11 infrastructure, "
-        f"{t2_breakdown['multi_infra']} connect to 2+ (validated), and "
-        f"{t2_breakdown['unresolved']} are unresolved (the target O11 infra can't be attributed "
-        f"to their connections). {t2_depth_txt}"
+        f"{t2_breakdown['one_infra']} have exactly 1 O11 infrastructure linked, "
+        f"{t2_breakdown['multi_infra']} have 2+ (validated), and "
+        f"{t2_breakdown['unresolved']} are unresolved (no O11 infrastructure configuration event "
+        f"yet -- this signal only exists from 2026-08-27). {t2_depth_txt}"
     )
 
     return {

@@ -42,11 +42,18 @@ report tab: TAM → Reach → Validated use case → Depth/breadth, for both tas
 
 1. `git add templates/report.html.j2 && git commit -m "..." && git push` the pending
    "Unresolved" caption (or fold it into whatever you do next).
-2. Watch the **Unresolved** count on the ODC-Interop-Code chart — it's been trending up
-   month over month (17/47 = 36% in the latest month at save time). Worth a follow-up:
-   is `INTEROPERABILITY_RELATED_ACTIVATION_CODE` simply not being set for newer
-   connections/tenants, or is this an artifact of recent customer growth outpacing the field's
-   backfill? Not yet investigated.
+2. ~~Watch the **Unresolved** count~~ — **investigated 2026-10-02, closed.** Not a backfill
+   lag and not "field only exists since July": the field is set by a provisioning job (90%
+   of coded tenants had it before first connecting; late fills are rare), and NULL means an
+   ODC tenant bought without an O11 infra link. The rise in Unresolved is a growing share of
+   such tenants among recent connections (small n). Details in `docs/data-context/tables.md`
+   (INFRASTRUCTURE → `interoperability_related_activation_code`).
+2b. **2026-10-02: q32/q33 switched to `ODC_METRIC.O11INFRASTRUCTURECONFIGURATION`** (O11
+   Bridge Service link events; distinct live LifeTime URLs per Reach customer). Data only from
+   2026-08-27, no backfill → most Reach customers read Unresolved (Sep 2026: 2 one-infra,
+   0 multi, 45 unresolved of 47). Follow-up: ask Unification Charlie
+   (vincent.verapen@outsystems.com) for a backfill/snapshot of pre-2026-08-27 links; watch for
+   eventVersion 1.1 (`o11UnificationPortfolioKey`) landing in prod.
 3. Revisit `LIFETIME_UNIFICATION` (q34/q35) periodically — it had exactly 8 rows (all
    2026-09-28/29) and zero resolvable tenant IDs as of this session. Once it has real
    customer coverage, reconsider whether it should become the primary signal (event-level,

@@ -1,6 +1,6 @@
 -- Data Interoperability Success Metrics -- Task 2, stage (d) Depth/breadth, monthly trend --
 -- ALTERNATE SIGNAL companion to q33, scoped to the q34 (LIFETIME_UNIFICATION-based) Validated
--- cohort instead of the q32 (INTEROPERABILITY_RELATED_ACTIVATION_CODE-based) one. See q34's
+-- cohort instead of the q32 (O11INFRASTRUCTURECONFIGURATION-based) one. See q34's
 -- header for why this reads empty today (brand-new telemetry stream, no real customer tenants
 -- resolved yet) and q29/q33 for the entity-count source and convention.
 WITH o11_odc_month AS (

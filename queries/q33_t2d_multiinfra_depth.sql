@@ -1,10 +1,12 @@
 -- Data Interoperability Success Metrics -- Task 2, stage (d) Depth/breadth, monthly trend:
 -- avg # of entities imported per O11 Data Fabric connection, broken out dev / non-prod / prod,
--- restricted to the Task 2(c) Validated cohort each month (see q32 for the full stage chain).
+-- restricted to the Task 2(c) Validated cohort each month (see q32 for the full stage chain):
+-- Reach customers with 2+ distinct live O11 LifeTime URLs linked via
+-- ODC_METRIC.O11INFRASTRUCTURECONFIGURATION (no data before 2026-08-27 -- see q32 caveats).
 --
--- "BY ACTIVATION CODE" SIMPLIFICATION: the doc asks for this broken out by activation code as
+-- "BY ACTIVATION CODE" SIMPLIFICATION: the doc asks for this broken out by O11 infra as
 -- well as by stage. This query reports the average PER CONNECTION across all of a customer's O11
--- infrastructures combined (i.e. a customer with 3 activation codes contributes all 3 infras'
+-- infrastructures combined (i.e. a customer with 3 linked infras contributes all 3 infras'
 -- connections to the same average) -- a true per-activation-code breakdown would need a
 -- per-company detail table rather than a single monthly trend line and isn't built here.
 --
@@ -66,36 +68,41 @@ reach_month AS (
   FROM tam_month t
   JOIN conn c ON c.month = t.month AND c.company_sfdc_id = t.company_sfdc_id
 ),
-conn_code_daily AS (
-  SELECT
-    DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1)) AS day,
-    odc.company_sfdc_id,
-    odc.interoperability_related_activation_code AS o11_code
-  FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT m
-  INNER JOIN CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE odc ON odc.tenant_id = m.tenant
-  WHERE odc.is_current AND odc.is_active
-    AND m.event_provider ILIKE 'o11%'
-    AND m.type = 'D'
-    AND m.metric_value > 0
-    AND DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1))
-        >= DATEADD('month', -12, CURRENT_DATE)
+infra_cfg_ev AS (
+  SELECT DISTINCT
+    messageid,
+    tenantid,
+    event_infrastructurekey AS infra_key,
+    LOWER(RTRIM(event_lifetimeurl, '/')) AS lifetime_url,
+    event_operationtype AS op,
+    TRY_TO_TIMESTAMP(eventdatetime) AS ts
+  FROM TELEMETRYANALYTICS.ODC_METRIC.O11INFRASTRUCTURECONFIGURATION
+  WHERE event_lifetimeurl IS NOT NULL
+    AND LOWER(event_lifetimeurl) NOT LIKE 'https://pp-%'
 ),
-conn_code AS (
-  SELECT DATE_TRUNC('month', day) AS month, company_sfdc_id, o11_code
-  FROM conn_code_daily
-  QUALIFY day = MAX(day) OVER (PARTITION BY DATE_TRUNC('month', day))
+cfg_months AS (
+  SELECT month FROM month_series
+  WHERE LAST_DAY(month) >= (SELECT DATE_TRUNC('month', MIN(ts)) FROM infra_cfg_ev)
 ),
-code_count AS (
-  SELECT month, company_sfdc_id, COUNT(DISTINCT o11_code) AS n_codes_connected
-  FROM conn_code
-  WHERE o11_code IS NOT NULL
+infra_cfg_asof AS (
+  SELECT m.month, e.tenantid, e.infra_key, e.lifetime_url, e.op
+  FROM cfg_months m
+  JOIN infra_cfg_ev e ON e.ts < DATEADD('day', 1, LAST_DAY(m.month))
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY m.month, e.tenantid, e.infra_key ORDER BY e.ts DESC) = 1
+),
+linked_count AS (
+  SELECT a.month, odc.company_sfdc_id, COUNT(DISTINCT a.lifetime_url) AS n_linked_infras
+  FROM infra_cfg_asof a
+  INNER JOIN CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE odc
+    ON odc.tenant_id = a.tenantid AND odc.is_current AND odc.is_active
+  WHERE a.op <> 'deleted'
   GROUP BY 1, 2
 ),
 validated_month AS (
   SELECT r.month, r.company_sfdc_id
   FROM reach_month r
-  JOIN code_count cc ON cc.month = r.month AND cc.company_sfdc_id = r.company_sfdc_id
-  WHERE cc.n_codes_connected >= 2
+  JOIN linked_count lc ON lc.month = r.month AND lc.company_sfdc_id = r.company_sfdc_id
+  WHERE lc.n_linked_infras >= 2
 ),
 ent_daily AS (
   SELECT

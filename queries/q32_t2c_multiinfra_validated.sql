@@ -1,18 +1,24 @@
 -- Data Interoperability Success Metrics -- Task 2, stage (c) Validated use case, monthly trend:
--- of the Task 2(b) Reach cohort, split by how many distinct O11 activation codes their live
--- connections target at month end -- exactly 1 vs 2+ (2+ = connections targeting different O11
--- infrastructures, not just different environments within the same one; that's Task 1, see q28's
--- caveat for why the distinction matters). A third bucket (Unresolved) covers Reach customers
--- whose connections carry no attributable O11 code at all.
+-- of the Task 2(b) Reach cohort, split by how many distinct O11 infrastructures the customer has
+-- linked to its ODC tenant(s) at month end -- exactly 1 vs 2+ (2+ = different O11 infrastructures,
+-- not just different environments within the same one; that's Task 1, see q28's caveat). A third
+-- bucket (Unresolved) covers Reach customers with no live O11 infrastructure configuration event.
 --
--- ACTIVATION CODE OF THE O11-SIDE INFRASTRUCTURE A CONNECTION TARGETS:
---   INTEROPERABILITY_RELATED_ACTIVATION_CODE on the ODC-family INFRASTRUCTURE row (matched via
---   tenant_id) -- the REAL O11 activation code the Data Fabric connection points to, as
---   established in q24. Re-verified at the company level within the O11/ODC cohort: ~79%
---   populated (not the ~0.7% row-level figure across ALL ODC infra rows system-wide, most of
---   which are irrelevant trial/unrelated tenants) -- this field is a solid signal, just a
---   tenant-level one (see q34 for an event-level alternative, TELEMETRYANALYTICS.METRICS
---   .LIFETIME_UNIFICATION, currently too new/sparse to use on its own).
+-- O11 INFRA SIGNAL: TELEMETRYANALYTICS.ODC_METRIC.O11INFRASTRUCTURECONFIGURATION -- the O11 Bridge
+--   Service's created/updated/deleted event for each ODC tenant <-> O11 infra link, the setup step
+--   that must exist before any O11 Data Fabric connector can be configured. Each O11 infra has a
+--   unique LifeTime URL, so # distinct live (normalized) EVENT_LIFETIMEURLs per company = # O11
+--   infras linked. State at month end = latest event per (tenant, infrastructure key) up to
+--   LAST_DAY(month), live unless that event is 'deleted'. Internal pre-prod `pp-*` URLs excluded.
+--   Replaces the earlier INTEROPERABILITY_RELATED_ACTIVATION_CODE signal, which records the O11
+--   infra a tenant was PROVISIONED against, not what it connects to.
+--
+-- CAVEATS:
+--   * Events start 2026-08-27 with NO BACKFILL: links created before then only appear once next
+--     touched, so Unresolved is inflated early on and months before the first event are dropped.
+--   * A linked infra is a prerequisite for, not proof of, a connector on it: the connection
+--     telemetry (EXTERNALCONNECTIONCOUNT) carries no infra key, so "2+ linked + 1 live connection"
+--     counts as validated. See docs/data-context/tables.md (O11INFRASTRUCTURECONFIGURATION).
 WITH o11_odc_month AS (
   SELECT DISTINCT company_sfdc_id, DATE_TRUNC('month', month_dt) AS month
   FROM CANONICAL.CUSTOMERSUCCESS.CUSTOMERUNIFIEDINFO
@@ -69,38 +75,44 @@ reach_month AS (
   FROM tam_month t
   JOIN conn c ON c.month = t.month AND c.company_sfdc_id = t.company_sfdc_id
 ),
-conn_code_daily AS (
-  SELECT
-    DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1)) AS day,
-    odc.company_sfdc_id,
-    odc.interoperability_related_activation_code AS o11_code
-  FROM TELEMETRYANALYTICS.ODC_METRIC.EXTERNALCONNECTIONCOUNT m
-  INNER JOIN CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE odc ON odc.tenant_id = m.tenant
-  WHERE odc.is_current AND odc.is_active
-    AND m.event_provider ILIKE 'o11%'
-    AND m.type = 'D'
-    AND m.metric_value > 0
-    AND DATEADD('day', m.date_value - 1, DATE_FROM_PARTS(m.year, 1, 1))
-        >= DATEADD('month', -12, CURRENT_DATE)
+infra_cfg_ev AS (
+  SELECT DISTINCT
+    messageid,
+    tenantid,
+    event_infrastructurekey AS infra_key,
+    LOWER(RTRIM(event_lifetimeurl, '/')) AS lifetime_url,
+    event_operationtype AS op,
+    TRY_TO_TIMESTAMP(eventdatetime) AS ts
+  FROM TELEMETRYANALYTICS.ODC_METRIC.O11INFRASTRUCTURECONFIGURATION
+  WHERE event_lifetimeurl IS NOT NULL
+    AND LOWER(event_lifetimeurl) NOT LIKE 'https://pp-%'
 ),
-conn_code AS (
-  SELECT DATE_TRUNC('month', day) AS month, company_sfdc_id, o11_code
-  FROM conn_code_daily
-  QUALIFY day = MAX(day) OVER (PARTITION BY DATE_TRUNC('month', day))
+cfg_months AS (
+  SELECT month FROM month_series
+  WHERE LAST_DAY(month) >= (SELECT DATE_TRUNC('month', MIN(ts)) FROM infra_cfg_ev)
 ),
-code_count AS (
-  SELECT month, company_sfdc_id, COUNT(DISTINCT o11_code) AS n_codes_connected
-  FROM conn_code
-  WHERE o11_code IS NOT NULL
+infra_cfg_asof AS (
+  SELECT m.month, e.tenantid, e.infra_key, e.lifetime_url, e.op
+  FROM cfg_months m
+  JOIN infra_cfg_ev e ON e.ts < DATEADD('day', 1, LAST_DAY(m.month))
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY m.month, e.tenantid, e.infra_key ORDER BY e.ts DESC) = 1
+),
+linked_count AS (
+  SELECT a.month, odc.company_sfdc_id, COUNT(DISTINCT a.lifetime_url) AS n_linked_infras
+  FROM infra_cfg_asof a
+  INNER JOIN CANONICAL.CUSTOMERSUCCESS.INFRASTRUCTURE odc
+    ON odc.tenant_id = a.tenantid AND odc.is_current AND odc.is_active
+  WHERE a.op <> 'deleted'
   GROUP BY 1, 2
 )
 SELECT
   r.month AS MONTH,
-  COUNT(DISTINCT CASE WHEN cc.n_codes_connected = 1 THEN r.company_sfdc_id END) AS ONE_INFRA_CUSTOMERS,
-  COUNT(DISTINCT CASE WHEN cc.n_codes_connected >= 2 THEN r.company_sfdc_id END) AS MULTI_INFRA_CUSTOMERS,
+  COUNT(DISTINCT CASE WHEN cc.n_linked_infras = 1 THEN r.company_sfdc_id END) AS ONE_INFRA_CUSTOMERS,
+  COUNT(DISTINCT CASE WHEN cc.n_linked_infras >= 2 THEN r.company_sfdc_id END) AS MULTI_INFRA_CUSTOMERS,
   COUNT(DISTINCT CASE WHEN cc.company_sfdc_id IS NULL THEN r.company_sfdc_id END) AS UNRESOLVED_CUSTOMERS,
   COUNT(DISTINCT r.company_sfdc_id) AS REACH_CUSTOMERS
 FROM reach_month r
-LEFT JOIN code_count cc ON cc.month = r.month AND cc.company_sfdc_id = r.company_sfdc_id
+JOIN cfg_months cm ON cm.month = r.month
+LEFT JOIN linked_count cc ON cc.month = r.month AND cc.company_sfdc_id = r.company_sfdc_id
 GROUP BY 1
 ORDER BY 1
