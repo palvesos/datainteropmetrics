@@ -6,7 +6,7 @@ Fetch fresh data from Snowflake and regenerate the HTML report.
 
 Run these steps in order. If any step fails (non-zero exit code or exception), stop and print the error.
 
-### 1. Run the 23 queries and save as Parquet
+### 1. Run the 33 queries and save as Parquet
 
 For each query, run the `snow sql` command to capture JSON output to a temp file, then parse it into a pandas DataFrame, convert date/boolean/numeric columns, and save to `data/`. Guard the conversions so empty result sets don't fail.
 
@@ -67,10 +67,22 @@ Per-query values:
 | q21 | `queries/q21_multi_o11_infra_with_df.sql` | `data/q21_multi_o11_infra_with_df.parquet` | — | — | `'NUM_O11_INFRAS'`, `'NUM_DF_PROVIDERS'`, `'CURRENT_DF_CONNECTORS'` |
 | q22 | `queries/q22_connector_removal_events_multi_o11.sql` | `data/q22_connector_removal_events_multi_o11.parquet` | — | — | `'NUM_O11_INFRAS'`, `'REMOVAL_EVENTS'`, `'TOTAL_CONNECTORS_REMOVED'`, `'PEAK_TOTAL_CONNECTORS'`, `'CONNECTORS_TODAY'` |
 | q23 | `queries/q23_o11_customers_removed_infra_multi_o11.sql` | `data/q23_o11_customers_removed_infra_multi_o11.parquet` | `'LAST_CONNECTOR_TELEMETRY_DAY'`, `'LAST_PLATFORM_USAGE_DAY'` | — | `'NUM_O11_INFRAS'`, `'N_O11_ENVS'`, `'PEAK_CONNECTORS'`, `'LAST_KNOWN_CONNECTORS'`, `'DAYS_SINCE_CONNECTOR_TELEMETRY'` |
+| q26 | `queries/q26_t1a_multipipeline_tam_monthly.sql` | `data/q26_t1a_multipipeline_tam_monthly.parquet` | `'MONTH'` | — | `'TAM_CUSTOMERS'`, `'O11_ODC_CUSTOMERS'` |
+| q27 | `queries/q27_t1b_multipipeline_reach.sql` | `data/q27_t1b_multipipeline_reach.parquet` | `'MONTH'` | — | `'REACH_CUSTOMERS'`, `'TAM_CUSTOMERS'` |
+| q28 | `queries/q28_t1c_multipipeline_validated.sql` | `data/q28_t1c_multipipeline_validated.parquet` | `'MONTH'` | — | `'VALIDATED_CUSTOMERS'`, `'REACH_CUSTOMERS'` |
+| q29 | `queries/q29_t1d_multipipeline_depth.sql` | `data/q29_t1d_multipipeline_depth.parquet` | `'MONTH'` | — | `'AVG_ENTITIES_DEV'`, `'AVG_ENTITIES_NONPROD'`, `'AVG_ENTITIES_PROD'` |
+| q30 | `queries/q30_t2a_multiinfra_tam_monthly.sql` | `data/q30_t2a_multiinfra_tam_monthly.parquet` | `'MONTH'` | — | `'TAM_CUSTOMERS'`, `'O11_ODC_CUSTOMERS'` |
+| q31 | `queries/q31_t2b_multiinfra_reach.sql` | `data/q31_t2b_multiinfra_reach.parquet` | `'MONTH'` | — | `'REACH_CUSTOMERS'`, `'TAM_CUSTOMERS'` |
+| q32 | `queries/q32_t2c_multiinfra_validated.sql` | `data/q32_t2c_multiinfra_validated.parquet` | `'MONTH'` | — | `'ONE_INFRA_CUSTOMERS'`, `'MULTI_INFRA_CUSTOMERS'`, `'UNRESOLVED_CUSTOMERS'`, `'REACH_CUSTOMERS'` |
+| q33 | `queries/q33_t2d_multiinfra_depth.sql` | `data/q33_t2d_multiinfra_depth.parquet` | `'MONTH'` | — | `'AVG_ENTITIES_DEV'`, `'AVG_ENTITIES_NONPROD'`, `'AVG_ENTITIES_PROD'` |
+| q34 | `queries/q34_t2c_multiinfra_validated_unification.sql` | `data/q34_t2c_multiinfra_validated_unification.parquet` | `'MONTH'` | — | `'ONE_INFRA_CUSTOMERS'`, `'MULTI_INFRA_CUSTOMERS'`, `'UNRESOLVED_CUSTOMERS'`, `'REACH_CUSTOMERS'` |
+| q35 | `queries/q35_t2d_multiinfra_depth_unification.sql` | `data/q35_t2d_multiinfra_depth_unification.parquet` | `'MONTH'` | — | `'AVG_ENTITIES_DEV'`, `'AVG_ENTITIES_NONPROD'`, `'AVG_ENTITIES_PROD'` |
 
 For queries with no date/bool/numeric cols, leave the corresponding placeholder as `[]`.
 
-After running all 23 queries, confirm 23 Parquet files exist in `data/` before continuing.
+Not run by refresh: `q24_data_interop_lifetime_version.sql` and `q25_t1a_multipipeline_tam.sql` are ad-hoc/reference queries that `render.py` does not read.
+
+After running all 33 queries, confirm 33 Parquet files exist in `data/` before continuing.
 
 ### 2. Render the report
 
